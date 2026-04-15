@@ -44,7 +44,6 @@ function PcHorizontalLayout() {
 			<NavHorizontalLayout data={navData} />
 
 			<Main />
-			
 		</>
 	);
 }
@@ -70,7 +69,6 @@ function PcVerticalLayout() {
 			>
 				<Header />
 				<Main />
-
 			</div>
 		</>
 	);

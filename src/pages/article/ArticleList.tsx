@@ -1,11 +1,10 @@
-
 // src/pages/article/ArticleList.tsx
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Image, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { useArticleStore } from '@/store/useArticleStore';
-import type { IArticle, ICatalogue } from '@/types/article';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Image, Input, InputNumber, Modal, Select, Space, Table, Tag } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { useArticleStore } from "@/store/useArticleStore";
+import type { IArticle, ICatalogue } from "@/types/article";
 
 // ================================================================
 // STYLES AMÉLIORÉS
@@ -311,377 +310,491 @@ const STYLES = `
 // COMPOSANT TH (En-tête avec filtre)
 // ================================================================
 function Th({
-  label, field, type = 'text', value, onChange,
+	label,
+	field,
+	type = "text",
+	value,
+	onChange,
 }: {
-  label: string; field: string; type?: 'text' | 'number';
-  value: string; onChange: (f: string, v: string) => void;
+	label: string;
+	field: string;
+	type?: "text" | "number";
+	value: string;
+	onChange: (f: string, v: string) => void;
 }) {
-  return (
-    <div className="art-th">
-      <div className="art-th-label">{label}</div>
-      <div className="art-th-inp">
-        {type === 'number' ? (
-          <InputNumber
-            size="small"
-            value={value ? Number(value) : undefined}
-            onChange={(v) => onChange(field, v != null ? String(v) : '')}
-            placeholder="..."
-            controls={false}
-          />
-        ) : (
-          <Input
-            size="small"
-            value={value}
-            onChange={(e) => onChange(field, e.target.value)}
-            placeholder="Filtrer..."
-            prefix={<SearchOutlined />}
-            allowClear
-          />
-        )}
-      </div>
-    </div>
-  );
+	return (
+		<div className="art-th">
+			<div className="art-th-label">{label}</div>
+			<div className="art-th-inp">
+				{type === "number" ? (
+					<InputNumber
+						size="small"
+						value={value ? Number(value) : undefined}
+						onChange={(v) => onChange(field, v != null ? String(v) : "")}
+						placeholder="..."
+						controls={false}
+					/>
+				) : (
+					<Input
+						size="small"
+						value={value}
+						onChange={(e) => onChange(field, e.target.value)}
+						placeholder="Filtrer..."
+						prefix={<SearchOutlined />}
+						allowClear
+					/>
+				)}
+			</div>
+		</div>
+	);
 }
 
 // ================================================================
 // TYPES
 // ================================================================
-interface CatLevel { items: ICatalogue[]; selectedId: number; label: string; }
+interface CatLevel {
+	items: ICatalogue[];
+	selectedId: number;
+	label: string;
+}
 
 interface Props {
-  onEdit: (cbMarq: number) => void;
-  onNew: () => void;
+	onEdit: (cbMarq: number) => void;
+	onNew: () => void;
 }
 
 // ================================================================
 // COMPOSANT PRINCIPAL
 // ================================================================
 export default function ArticleList({ onEdit, onNew }: Props) {
-  const {
-    articles, totalCount, loading, depots,
-    filter, setFilter, fetchArticles, fetchDepots,
-    selectedId, setSelectedId, deleteArticle,
-  } = useArticleStore();
+	const {
+		articles,
+		totalCount,
+		loading,
+		depots,
+		filter,
+		setFilter,
+		fetchArticles,
+		fetchDepots,
+		selectedId,
+		setSelectedId,
+		deleteArticle,
+	} = useArticleStore();
 
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [colFilters, setColFilters] = useState<Record<string, string>>({});
-  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedRow = useRef<IArticle | null>(null);
-  const [, forceRender] = useState(0);
+	const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+	const [colFilters, setColFilters] = useState<Record<string, string>>({});
+	const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const selectedRow = useRef<IArticle | null>(null);
+	const [, forceRender] = useState(0);
 
-  // ---- Catalogue state ----
-  const [catLevels, setCatLevels] = useState<CatLevel[]>([]);
-  const [catLoading, setCatLoading] = useState(false);
+	// ---- Catalogue state ----
+	const [catLevels, setCatLevels] = useState<CatLevel[]>([]);
+	const [catLoading, setCatLoading] = useState(false);
 
-  useEffect(() => { fetchDepots(); fetchArticles(); }, []); // eslint-disable-line
-  useEffect(() => { fetchArticles(); }, [filter]); // eslint-disable-line
+	useEffect(() => {
+		fetchDepots();
+		fetchArticles();
+	}, []); // eslint-disable-line
+	useEffect(() => {
+		fetchArticles();
+	}, [filter]); // eslint-disable-line
 
-  // Charger le premier niveau de catalogue au montage
-  useEffect(() => {
-    import('@/api/articleApi').then(({ articleApi }) => {
-      articleApi.getCatalogues(0, 0).then(({ data }) => {
-        const items: ICatalogue[] = [
-          { value: 0, text: 'Tous', isParent: false },
-          ...(data ?? []),
-        ];
-        setCatLevels([{ items, selectedId: 0, label: 'Catalogue' }]);
-      }).catch(() => {});
-    });
-  }, []);
+	// Charger le premier niveau de catalogue au montage
+	useEffect(() => {
+		import("@/api/articleApi").then(({ articleApi }) => {
+			articleApi
+				.getCatalogues(0, 0)
+				.then(({ data }) => {
+					const items: ICatalogue[] = [{ value: 0, text: "Tous", isParent: false }, ...(data ?? [])];
+					setCatLevels([{ items, selectedId: 0, label: "Catalogue" }]);
+				})
+				.catch(() => {});
+		});
+	}, []);
 
-  // Met à jour le filtre catalogue à partir des niveaux
-  const applyCatFilter = (levels: CatLevel[]) => {
-    const ids = levels.map((l) => l.selectedId);
-    const patch: Record<string, number> = {};
-    for (let i = 1; i <= 4; i++) patch[`cL_No${i}`] = ids[i] ?? 0;
-    setFilter(patch as Parameters<typeof setFilter>[0]);
-  };
+	// Met à jour le filtre catalogue à partir des niveaux
+	const applyCatFilter = (levels: CatLevel[]) => {
+		const ids = levels.map((l) => l.selectedId);
+		const patch: Record<string, number> = {};
+		for (let i = 1; i <= 4; i++) patch[`cL_No${i}`] = ids[i] ?? 0;
+		setFilter(patch as Parameters<typeof setFilter>[0]);
+	};
 
-  // Changement de sélection
-  const handleCatLevelChange = (levelIdx: number, value: number) => {
-    const currentLevel = catLevels[levelIdx];
-    if (!currentLevel) return;
+	// Changement de sélection
+	const handleCatLevelChange = (levelIdx: number, value: number) => {
+		const currentLevel = catLevels[levelIdx];
+		if (!currentLevel) return;
 
-    const cat = currentLevel.items.find((c) => c.value === value);
-    if (!cat) return;
+		const cat = currentLevel.items.find((c) => c.value === value);
+		if (!cat) return;
 
-    const newLevels = catLevels
-      .slice(0, levelIdx + 1)
-      .map((l, i) => (i === levelIdx ? { ...l, selectedId: value } : l));
+		const newLevels = catLevels
+			.slice(0, levelIdx + 1)
+			.map((l, i) => (i === levelIdx ? { ...l, selectedId: value } : l));
 
-    if (cat.isParent && value !== 0) {
-      setCatLoading(true);
-      import('@/api/articleApi').then(({ articleApi }) => {
-        articleApi.getCatalogues(value, levelIdx + 1).then(({ data }) => {
-          setCatLoading(false);
-          if (data && data.length > 0) {
-            const children: ICatalogue[] = [
-              { value, text: 'Tous', isParent: false },
-              ...data,
-            ];
-            newLevels.push({ items: children, selectedId: value, label: cat.text });
-          }
-          setCatLevels(newLevels);
-          applyCatFilter(newLevels);
-        }).catch(() => {
-          setCatLoading(false);
-          setCatLevels(newLevels);
-          applyCatFilter(newLevels);
-        });
-      });
-    } else {
-      setCatLevels(newLevels);
-      applyCatFilter(newLevels);
-    }
-  };
+		if (cat.isParent && value !== 0) {
+			setCatLoading(true);
+			import("@/api/articleApi").then(({ articleApi }) => {
+				articleApi
+					.getCatalogues(value, levelIdx + 1)
+					.then(({ data }) => {
+						setCatLoading(false);
+						if (data && data.length > 0) {
+							const children: ICatalogue[] = [{ value, text: "Tous", isParent: false }, ...data];
+							newLevels.push({ items: children, selectedId: value, label: cat.text });
+						}
+						setCatLevels(newLevels);
+						applyCatFilter(newLevels);
+					})
+					.catch(() => {
+						setCatLoading(false);
+						setCatLevels(newLevels);
+						applyCatFilter(newLevels);
+					});
+			});
+		} else {
+			setCatLevels(newLevels);
+			applyCatFilter(newLevels);
+		}
+	};
 
-  const handleColFilter = (field: string, value: string) => {
-    const next = { ...colFilters, [field]: value };
-    setColFilters(next);
-    if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => {
-      const map: Record<string, string> = {
-        aR_Ref: 'aR_Ref', aR_Design: 'aR_Design',
-        fA_Intitule: 'fA_CodeFamille', aR_PrixAch: 'aR_PrixAch',
-      };
-      const params = Object.fromEntries(
-        Object.entries(next).filter(([, v]) => v !== '').map(([k, v]) => [map[k] ?? k, v])
-      );
-      setFilter(params as Parameters<typeof setFilter>[0]);
-    }, 400);
-  };
+	const handleColFilter = (field: string, value: string) => {
+		const next = { ...colFilters, [field]: value };
+		setColFilters(next);
+		if (debounce.current) clearTimeout(debounce.current);
+		debounce.current = setTimeout(() => {
+			const map: Record<string, string> = {
+				aR_Ref: "aR_Ref",
+				aR_Design: "aR_Design",
+				fA_Intitule: "fA_CodeFamille",
+				aR_PrixAch: "aR_PrixAch",
+			};
+			const params = Object.fromEntries(
+				Object.entries(next)
+					.filter(([, v]) => v !== "")
+					.map(([k, v]) => [map[k] ?? k, v]),
+			);
+			setFilter(params as Parameters<typeof setFilter>[0]);
+		}, 400);
+	};
 
-  const depotCols = useMemo<ColumnsType<IArticle>>(
-    () => depots.map((d) => ({
-      key: `DE_${d.dE_No}`,
-      dataIndex: `DE_${d.dE_No}`,
-      width: 130,
-      align: 'right' as const,
-      title: (
-        <Th
-          label={d.dE_Intitule}
-          field={`DE_${d.dE_No}`}
-          type="number"
-          value={colFilters[`DE_${d.dE_No}`] ?? ''}
-          onChange={handleColFilter}
-        />
-      ),
-      render: (_: unknown, row: IArticle) => {
-        const v = (row as Record<string, unknown>)[`DE_${d.dE_No}`];
-        const n = typeof v === 'number' ? v : 0;
-        return (
-          <span style={{ color: n > 0 ? '#2b6cb0' : '#a0aec0', fontWeight: n > 0 ? 600 : 400 }}>
-            {n}
-          </span>
-        );
-      },
-    })),
-    [depots, colFilters],
-  );
+	const depotCols = useMemo<ColumnsType<IArticle>>(
+		() =>
+			depots.map((d) => ({
+				key: `DE_${d.dE_No}`,
+				dataIndex: `DE_${d.dE_No}`,
+				width: 130,
+				align: "right" as const,
+				title: (
+					<Th
+						label={d.dE_Intitule}
+						field={`DE_${d.dE_No}`}
+						type="number"
+						value={colFilters[`DE_${d.dE_No}`] ?? ""}
+						onChange={handleColFilter}
+					/>
+				),
+				render: (_: unknown, row: IArticle) => {
+					const v = (row as Record<string, unknown>)[`DE_${d.dE_No}`];
+					const n = typeof v === "number" ? v : 0;
+					return <span style={{ color: n > 0 ? "#2b6cb0" : "#a0aec0", fontWeight: n > 0 ? 600 : 400 }}>{n}</span>;
+				},
+			})),
+		[depots, colFilters],
+	);
 
-  const cols = useMemo<ColumnsType<IArticle>>(
-    () => [
-      {
-        key: 'aR_Ref', dataIndex: 'aR_Ref', width: 130, sorter: true,
-        title: <Th label="Référence" field="aR_Ref" value={colFilters['aR_Ref'] ?? ''} onChange={handleColFilter} />,
-        render: (v: string, row: IArticle) => (
-          <span className="art-ref" onClick={() => onEdit(row.cbMarq)}>{v}</span>
-        ),
-      },
-      {
-        key: 'aR_Design', dataIndex: 'aR_Design', width: 220,
-        title: <Th label="Désignation" field="aR_Design" value={colFilters['aR_Design'] ?? ''} onChange={handleColFilter} />,
-      },
-      {
-        key: 'fA_Intitule', dataIndex: 'fA_Intitule', width: 160,
-        title: <Th label="Famille" field="fA_Intitule" value={colFilters['fA_Intitule'] ?? ''} onChange={handleColFilter} />,
-      },
-      {
-        key: 'aR_PrixAch', dataIndex: 'aR_PrixAch', width: 110, align: 'right' as const, sorter: true,
-        title: <Th label="Prix Achat" field="aR_PrixAch" type="number" value={colFilters['aR_PrixAch'] ?? ''} onChange={handleColFilter} />,
-        render: (v: number) => v ? <span style={{ fontWeight: 500, color: '#2d3748' }}>{v.toFixed(3)}</span> : '',
-      },
-      ...depotCols,
-      {
-        key: 'totalStock', dataIndex: 'totalStock', width: 110, align: 'right' as const, sorter: true,
-        title: <div className="art-th"><div className="art-th-label">Total Stock</div></div>,
-        render: (v: number) => (
-          <Tag color={v > 0 ? '#3182ce' : '#cbd5e0'} style={{ minWidth: 40, textAlign: 'center', fontSize: 11, fontWeight: 600, borderRadius: 4, border: 'none' }}>
-            {v ?? 0}
-          </Tag>
-        ),
-      },
-      {
-        key: 'aR_Photo', dataIndex: 'aR_Photo', width: 60, align: 'center' as const,
-        title: <div className="art-th"><div className="art-th-label">Photo</div></div>,
-        render: (v: string) => v ? (
-          <img src={v} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-            onClick={(e) => { e.stopPropagation(); setLightboxSrc(v); }} />
-        ) : null,
-      },
-    ],
-    [depotCols, colFilters, onEdit],
-  );
+	const cols = useMemo<ColumnsType<IArticle>>(
+		() => [
+			{
+				key: "aR_Ref",
+				dataIndex: "aR_Ref",
+				width: 130,
+				sorter: true,
+				title: <Th label="Référence" field="aR_Ref" value={colFilters["aR_Ref"] ?? ""} onChange={handleColFilter} />,
+				render: (v: string, row: IArticle) => (
+					<span className="art-ref" onClick={() => onEdit(row.cbMarq)}>
+						{v}
+					</span>
+				),
+			},
+			{
+				key: "aR_Design",
+				dataIndex: "aR_Design",
+				width: 220,
+				title: (
+					<Th label="Désignation" field="aR_Design" value={colFilters["aR_Design"] ?? ""} onChange={handleColFilter} />
+				),
+			},
+			{
+				key: "fA_Intitule",
+				dataIndex: "fA_Intitule",
+				width: 160,
+				title: (
+					<Th label="Famille" field="fA_Intitule" value={colFilters["fA_Intitule"] ?? ""} onChange={handleColFilter} />
+				),
+			},
+			{
+				key: "aR_PrixAch",
+				dataIndex: "aR_PrixAch",
+				width: 110,
+				align: "right" as const,
+				sorter: true,
+				title: (
+					<Th
+						label="Prix Achat"
+						field="aR_PrixAch"
+						type="number"
+						value={colFilters["aR_PrixAch"] ?? ""}
+						onChange={handleColFilter}
+					/>
+				),
+				render: (v: number) => (v ? <span style={{ fontWeight: 500, color: "#2d3748" }}>{v.toFixed(3)}</span> : ""),
+			},
+			...depotCols,
+			{
+				key: "totalStock",
+				dataIndex: "totalStock",
+				width: 110,
+				align: "right" as const,
+				sorter: true,
+				title: (
+					<div className="art-th">
+						<div className="art-th-label">Total Stock</div>
+					</div>
+				),
+				render: (v: number) => (
+					<Tag
+						color={v > 0 ? "#3182ce" : "#cbd5e0"}
+						style={{
+							minWidth: 40,
+							textAlign: "center",
+							fontSize: 11,
+							fontWeight: 600,
+							borderRadius: 4,
+							border: "none",
+						}}
+					>
+						{v ?? 0}
+					</Tag>
+				),
+			},
+			{
+				key: "aR_Photo",
+				dataIndex: "aR_Photo",
+				width: 60,
+				align: "center" as const,
+				title: (
+					<div className="art-th">
+						<div className="art-th-label">Photo</div>
+					</div>
+				),
+				render: (v: string) =>
+					v ? (
+						<img
+							src={v}
+							alt=""
+							style={{
+								width: 32,
+								height: 32,
+								objectFit: "cover",
+								borderRadius: 6,
+								cursor: "pointer",
+								boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+							}}
+							onClick={(e) => {
+								e.stopPropagation();
+								setLightboxSrc(v);
+							}}
+						/>
+					) : null,
+			},
+		],
+		[depotCols, colFilters, onEdit],
+	);
 
-  const handleDelete = () => {
-    if (!selectedId) return;
-    Modal.confirm({
-      title: 'Confirmer la suppression',
-      content: 'Voulez-vous vraiment supprimer cet article ?',
-      okText: 'Supprimer', okType: 'danger', cancelText: 'Annuler',
-      onOk: () => deleteArticle(selectedId),
-    });
-  };
+	const handleDelete = () => {
+		if (!selectedId) return;
+		Modal.confirm({
+			title: "Confirmer la suppression",
+			content: "Voulez-vous vraiment supprimer cet article ?",
+			okText: "Supprimer",
+			okType: "danger",
+			cancelText: "Annuler",
+			onOk: () => deleteArticle(selectedId),
+		});
+	};
 
-  return (
-    <>
-      <style>{STYLES}</style>
+	return (
+		<>
+			<style>{STYLES}</style>
 
-      <div className="art-page">
-        <div className="art-main">
-          
-          {/* ===== SIDEBAR (NIVEAU 1) ===== */}
-          {catLevels.length > 0 && (
-            <div className="art-sidebar">
-              <div className="art-sidebar-header">Catalogue</div>
-              <div className="art-sidebar-scroll">
-                {catLevels[0].items.map((cat) => (
-                  <div
-                    key={cat.value}
-                    className={`art-sidebar-item ${catLevels[0].selectedId === cat.value ? 'active' : ''}`}
-                    onClick={() => handleCatLevelChange(0, cat.value)}
-                  >
-                    <span>{cat.text}</span>
-                    {cat.isParent && <span className="art-sidebar-arrow">›</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+			<div className="art-page">
+				<div className="art-main">
+					{/* ===== SIDEBAR (NIVEAU 1) ===== */}
+					{catLevels.length > 0 && (
+						<div className="art-sidebar">
+							<div className="art-sidebar-header">Catalogue</div>
+							<div className="art-sidebar-scroll">
+								{catLevels[0].items.map((cat) => (
+									<div
+										key={cat.value}
+										className={`art-sidebar-item ${catLevels[0].selectedId === cat.value ? "active" : ""}`}
+										onClick={() => handleCatLevelChange(0, cat.value)}
+									>
+										<span>{cat.text}</span>
+										{cat.isParent && <span className="art-sidebar-arrow">›</span>}
+									</div>
+								))}
+							</div>
+						</div>
+					)}
 
-          {/* ===== ZONE PRINCIPALE (TABLE) ===== */}
-          <div className="art-card">
-            
-            {/* ---- BREADCRUMB HORIZONTAL (NIVEAUX 2+) ---- */}
-            {catLevels.length > 1 && (
-              <div className="art-cat-breadcrumb">
-                {catLevels.slice(1).map((level, idx) => {
-                  const realIndex = idx + 1; 
-                  return (
-                    <span key={realIndex} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <span className="art-cat-sep">/</span>
-                      <Select
-                        size="small"
-                        value={level.selectedId}
-                        onChange={(v) => handleCatLevelChange(realIndex, v)}
-                        options={level.items.map((c) => ({
-                          value: c.value,
-                          label: (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%' }}>
-                              <span>{c.text}</span>
-                              {c.isParent && (
-                                <span style={{ fontSize: 12, color: '#a0aec0', fontWeight: 300 }}>›</span>
-                              )}
-                            </span>
-                          ),
-                        }))}
-                        style={{ width: 180 }}
-                        loading={catLoading && realIndex === catLevels.length - 1}
-                        popupMatchSelectWidth={false}
-                        showSearch
-                        optionFilterProp="label"
-                        allowClear={false}
-                      />
-                    </span>
-                  );
-                })}
-              </div>
-            )}
+					{/* ===== ZONE PRINCIPALE (TABLE) ===== */}
+					<div className="art-card">
+						{/* ---- BREADCRUMB HORIZONTAL (NIVEAUX 2+) ---- */}
+						{catLevels.length > 1 && (
+							<div className="art-cat-breadcrumb">
+								{catLevels.slice(1).map((level, idx) => {
+									const realIndex = idx + 1;
+									return (
+										<span key={realIndex} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+											<span className="art-cat-sep">/</span>
+											<Select
+												size="small"
+												value={level.selectedId}
+												onChange={(v) => handleCatLevelChange(realIndex, v)}
+												options={level.items.map((c) => ({
+													value: c.value,
+													label: (
+														<span
+															style={{
+																display: "inline-flex",
+																alignItems: "center",
+																justifyContent: "space-between",
+																gap: 12,
+																width: "100%",
+															}}
+														>
+															<span>{c.text}</span>
+															{c.isParent && <span style={{ fontSize: 12, color: "#a0aec0", fontWeight: 300 }}>›</span>}
+														</span>
+													),
+												}))}
+												style={{ width: 180 }}
+												loading={catLoading && realIndex === catLevels.length - 1}
+												popupMatchSelectWidth={false}
+												showSearch
+												optionFilterProp="label"
+												allowClear={false}
+											/>
+										</span>
+									);
+								})}
+							</div>
+						)}
 
-            {/* ---- TOOLBAR ---- */}
-            <div className="art-toolbar">
-              <div className="art-toolbar-left">
-                <span className="art-toolbar-title">Liste des Articles</span>
-                <div className="art-page-size-wrap">
-                  <span>Afficher :</span>
-                  <Select
-                    size="small"
-                    value={filter.pageSize}
-                    onChange={(v) => setFilter({ pageSize: v, pageIndex: 1 })}
-                    options={[10, 20, 50, 100].map((n) => ({ value: n, label: String(n) }))}
-                    style={{ width: 70, minWidth: 70 }}
-                    bordered={false}
-                  />
-                </div>
-              </div>
-              <Space size="small">
-                <Button
-                  size="small" type="primary" icon={<PlusOutlined />} onClick={onNew}
-                  style={{ background: '#1a4f78', borderColor: '#1a4f78', fontWeight: 600, borderRadius: 6, boxShadow: '0 2px 4px rgba(26,79,120,0.3)' }}
-                >
-                  Nouveau
-                </Button>
-                <Button
-                  size="small" icon={<EditOutlined />}
-                  onClick={() => onEdit(selectedId)} disabled={!selectedId}
-                  style={{ borderRadius: 6, color: selectedId ? '#1a4f78' : '#cbd5e0', borderColor: selectedId ? '#1a4f78' : '#e2e8f0' }}
-                >
-                  Modifier
-                </Button>
-                <Button
-                  size="small" danger icon={<DeleteOutlined />}
-                  onClick={handleDelete} disabled={!selectedId}
-                  style={{ borderRadius: 6 }}
-                >
-                  Supprimer
-                </Button>
-              </Space>
-            </div>
+						{/* ---- TOOLBAR ---- */}
+						<div className="art-toolbar">
+							<div className="art-toolbar-left">
+								<span className="art-toolbar-title">Liste des Articles</span>
+								<div className="art-page-size-wrap">
+									<span>Afficher :</span>
+									<Select
+										size="small"
+										value={filter.pageSize}
+										onChange={(v) => setFilter({ pageSize: v, pageIndex: 1 })}
+										options={[10, 20, 50, 100].map((n) => ({ value: n, label: String(n) }))}
+										style={{ width: 70, minWidth: 70 }}
+										bordered={false}
+									/>
+								</div>
+							</div>
+							<Space size="small">
+								<Button
+									size="small"
+									type="primary"
+									icon={<PlusOutlined />}
+									onClick={onNew}
+									style={{
+										background: "#1a4f78",
+										borderColor: "#1a4f78",
+										fontWeight: 600,
+										borderRadius: 6,
+										boxShadow: "0 2px 4px rgba(26,79,120,0.3)",
+									}}
+								>
+									Nouveau
+								</Button>
+								<Button
+									size="small"
+									icon={<EditOutlined />}
+									onClick={() => onEdit(selectedId)}
+									disabled={!selectedId}
+									style={{
+										borderRadius: 6,
+										color: selectedId ? "#1a4f78" : "#cbd5e0",
+										borderColor: selectedId ? "#1a4f78" : "#e2e8f0",
+									}}
+								>
+									Modifier
+								</Button>
+								<Button
+									size="small"
+									danger
+									icon={<DeleteOutlined />}
+									onClick={handleDelete}
+									disabled={!selectedId}
+									style={{ borderRadius: 6 }}
+								>
+									Supprimer
+								</Button>
+							</Space>
+						</div>
 
-            {/* ---- TABLEAU ---- */}
-            <Table<IArticle>
-              className="art-table"
-              dataSource={articles}
-              columns={cols}
-              loading={loading}
-              rowKey={(r) => r.cbMarq}
-              size="small"
-              scroll={{ x: 'max-content', y: 'calc(100vh - 230px)' }}
-              rowClassName={(r) =>
-                selectedRow.current?.cbMarq === r.cbMarq ? 'art-row-sel' : ''
-              }
-              onRow={(r) => ({
-                onClick: () => {
-                  selectedRow.current = r;
-                  setSelectedId(r.cbMarq);
-                  forceRender((n) => n + 1);
-                },
-                onDoubleClick: () => onEdit(r.cbMarq),
-                style: { cursor: 'pointer' },
-              })}
-              pagination={{
-                current: filter.pageIndex,
-                pageSize: filter.pageSize,
-                total: totalCount,
-                showSizeChanger: false,
-                size: 'small',
-                showTotal: (total, range) => `${range[0]}-${range[1]} sur ${total}`,
-                onChange: (page) => setFilter({ pageIndex: page }),
-              }}
-            />
-          </div>
-        </div>
-      </div>
+						{/* ---- TABLEAU ---- */}
+						<Table<IArticle>
+							className="art-table"
+							dataSource={articles}
+							columns={cols}
+							loading={loading}
+							rowKey={(r) => r.cbMarq}
+							size="small"
+							scroll={{ x: "max-content", y: "calc(100vh - 230px)" }}
+							rowClassName={(r) => (selectedRow.current?.cbMarq === r.cbMarq ? "art-row-sel" : "")}
+							onRow={(r) => ({
+								onClick: () => {
+									selectedRow.current = r;
+									setSelectedId(r.cbMarq);
+									forceRender((n) => n + 1);
+								},
+								onDoubleClick: () => onEdit(r.cbMarq),
+								style: { cursor: "pointer" },
+							})}
+							pagination={{
+								current: filter.pageIndex,
+								pageSize: filter.pageSize,
+								total: totalCount,
+								showSizeChanger: false,
+								size: "small",
+								showTotal: (total, range) => `${range[0]}-${range[1]} sur ${total}`,
+								onChange: (page) => setFilter({ pageIndex: page }),
+							}}
+						/>
+					</div>
+				</div>
+			</div>
 
-      {/* Lightbox image */}
-      <Image
-        style={{ display: 'none' }}
-        preview={{
-          visible: !!lightboxSrc,
-          src: lightboxSrc ?? '',
-          onVisibleChange: (v) => { if (!v) setLightboxSrc(null); },
-        }}
-      />
-    </>
-  );
+			{/* Lightbox image */}
+			<Image
+				style={{ display: "none" }}
+				preview={{
+					visible: !!lightboxSrc,
+					src: lightboxSrc ?? "",
+					onVisibleChange: (v) => {
+						if (!v) setLightboxSrc(null);
+					},
+				}}
+			/>
+		</>
+	);
 }

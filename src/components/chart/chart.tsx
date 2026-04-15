@@ -15,16 +15,16 @@ export function Chart(props: ApexChartProps) {
 						animations: {
 							...props.options?.chart?.animations,
 							enabled: true,
-							speed: 200, 
+							speed: 200,
 							animateGradually: {
-								enabled: false, 
+								enabled: false,
 							},
 							dynamicAnimation: {
 								enabled: true,
-								speed: 200, 
+								speed: 200,
 							},
 						},
-						
+
 						redrawOnParentResize: true,
 						redrawOnWindowResize: true,
 					},

@@ -10,7 +10,6 @@ import { GLOBAL_CONFIG } from "./global-config";
 import { AntdAdapter } from "./theme/adapter/antd.adapter";
 import { ThemeProvider } from "./theme/theme-provider";
 
-
 function App({ children }: { children: React.ReactNode }) {
 	return (
 		<HelmetProvider>

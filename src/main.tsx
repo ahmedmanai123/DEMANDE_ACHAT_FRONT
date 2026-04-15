@@ -15,34 +15,32 @@ import { urlJoin } from "./utils";
 await registerLocalIcons();
 
 await worker.start({
-  onUnhandledRequest: "bypass", // OK — laisse passer les requêtes non mockées
-  serviceWorker: {
-    url: urlJoin(GLOBAL_CONFIG.publicPath, "mockServiceWorker.js"),
-  },
+	onUnhandledRequest: "bypass", // OK — laisse passer les requêtes non mockées
+	serviceWorker: {
+		url: urlJoin(GLOBAL_CONFIG.publicPath, "mockServiceWorker.js"),
+	},
 });
 
 if (GLOBAL_CONFIG.routerMode === "backend") {
-  await menuService.getMenuList();
+	await menuService.getMenuList();
 }
 
 const router = createBrowserRouter(
-  [
-    {
-      Component: () => (
-        <App>
-          <Outlet />
-        </App>
-      ),
-      errorElement: <ErrorBoundary />,
-      children: routesSection,
-    },
-  ],
-  {
-    basename: GLOBAL_CONFIG.publicPath,
-  },
+	[
+		{
+			Component: () => (
+				<App>
+					<Outlet />
+				</App>
+			),
+			errorElement: <ErrorBoundary />,
+			children: routesSection,
+		},
+	],
+	{
+		basename: GLOBAL_CONFIG.publicPath,
+	},
 );
 
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
-);
+const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 root.render(<RouterProvider router={router} />);

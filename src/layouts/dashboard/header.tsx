@@ -53,7 +53,7 @@ export default function Header({ leftSlot }: HeaderProps) {
 				</Button>
 				<NoticeButton />
 				<SettingButton />
-				
+
 				<AccountDropdown />
 			</div>
 		</header>

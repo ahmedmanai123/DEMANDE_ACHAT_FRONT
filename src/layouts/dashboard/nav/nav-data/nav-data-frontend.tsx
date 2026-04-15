@@ -21,23 +21,23 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/articles",
 				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
 			},
-			 {
-        title: "Demandes d'achat", // Titre du menu parent
-        path: "/besoin",            // Path du parent (souvent optionnel selon le layout)
-        icon: <Icon icon="mdi:cart" size="24" />,
-        children: [
-          {
-            title: "Demandes de besoin",
-            // IMPORTANT : Ce path doit être IDENTIQUE à celui dans 'routes'
-            path: "/besoin/demandes", 
-          },
-          {
-            title: "Gestion des demandes",
-            // Si cette route n'existe pas encore dans routes.ts, elle ne marchera pas
-            path: "/besoin/gestion",
-          },
-        ],
-      },
+			{
+				title: "Demandes d'achat", // Titre du menu parent
+				path: "/besoin", // Path du parent (souvent optionnel selon le layout)
+				icon: <Icon icon="mdi:cart" size="24" />,
+				children: [
+					{
+						title: "Demandes de besoin",
+						// IMPORTANT : Ce path doit être IDENTIQUE à celui dans 'routes'
+						path: "/besoin/demandes",
+					},
+					{
+						title: "Gestion des demandes",
+						// Si cette route n'existe pas encore dans routes.ts, elle ne marchera pas
+						path: "/besoin/gestion",
+					},
+				],
+			},
 		],
 	},
 	{
