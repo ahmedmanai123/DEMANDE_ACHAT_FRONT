@@ -42,7 +42,16 @@ export const DB_MENU: Menu[] = [
 		path: "/articles",
 		component: "/pages/article",
 	},
-
+	{
+		id: "besoins",
+		parentId: "group_dashboard",
+		name: "sys.nav.besoins",
+		code: "besoins",
+		icon: "solar:box-bold-duotone",
+		type: MENU,
+		path: "/besoins",
+		component: "/pages/besoin",
+	},
 	// group_pages
 	// management
 	{

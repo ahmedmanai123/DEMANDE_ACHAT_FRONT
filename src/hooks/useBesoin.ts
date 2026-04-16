@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useState, useCallback, useEffect } from "react";
-import { besoinService, articleBesoinService, validationService } from "../services/besoinservice";
+import { besoinService, articleBesoinService, validationService } from "../services/besoinService";
 import type {
 	DA_BESOINDto,
 	DA_BESOIN_ARTICLEDto,
@@ -12,7 +12,7 @@ import type {
 	Validateur_BesoinVM,
 	Type_Validation,
 	Etat_Besoin,
-} from "../types/besoin.types";
+} from "../types/besoin";
 
 // ── Helpers ──────────────────────────────────────────────────
 

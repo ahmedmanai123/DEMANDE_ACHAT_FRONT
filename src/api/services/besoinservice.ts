@@ -15,7 +15,7 @@ import {
 	Type_Validation,
 	TypeSage,
 	Validateur_BesoinVM,
-} from "@/types/besoin.types";
+} from "@/types/besoin";
 import axios, { AxiosResponse } from "axios";
 
 // ── Config Axios (à placer dans api/axiosInstance.ts) ────────
