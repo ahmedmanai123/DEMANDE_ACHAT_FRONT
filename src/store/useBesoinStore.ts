@@ -1,7 +1,7 @@
 // src/stores/useBesoinStore.ts
 import { create } from "zustand";
-import * as besoinService from "@/services/besoinservice";
-import type { IBesoin, IBesoinFilter, IBesoinArticle } from "@/types/besoin";
+import * as besoinService from "@/services/besoinService";
+import { Etat_Besoin, type IBesoin, type IBesoinArticle, type IBesoinFilter } from "@/types/besoin";
 
 interface BesoinState {
 	besoins: IBesoin[];
@@ -29,7 +29,7 @@ export const useBesoinStore = create<BesoinState>((set, get) => ({
 	filter: {
 		pageIndex: 1,
 		pageSize: 20,
-		b_Etat_Besoin: 0, // Tous
+		b_Etat_Besoin: Etat_Besoin.Tous,
 	},
 
 	setFilter: (f) => set((s) => ({ filter: { ...s.filter, ...f, pageIndex: 1 } })),
@@ -40,10 +40,9 @@ export const useBesoinStore = create<BesoinState>((set, get) => ({
 		set({ loading: true });
 		try {
 			const response = await besoinService.getBesoins(get().filter);
-			const data = (response as any)?.data ?? response;
 			set({
-				besoins: data?.data ?? data ?? [],
-				totalCount: data?.itemsCount ?? data?.totalCount ?? 0,
+				besoins: response?.data ?? [],
+				totalCount: response?.itemsCount ?? 0,
 				loading: false,
 			});
 		} catch {
@@ -60,9 +59,8 @@ export const useBesoinStore = create<BesoinState>((set, get) => ({
 				b_BesoinId: b_No,
 				bT_Id,
 			});
-			const data = (response as any)?.data ?? response;
 			set({
-				articles: data?.data ?? data ?? [],
+				articles: response?.data ?? [],
 				articlesLoading: false,
 			});
 		} catch {

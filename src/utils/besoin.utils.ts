@@ -4,14 +4,7 @@
 // Remplace GetEnumDescription(), createBadge() des vues Razor
 // ============================================================
 
-import {
-	Etat_Besoin,
-	Statut,
-	Role_Validateur,
-	Etat_Affectation_Acheteur,
-	TypeSage,
-	Type_Validation,
-} from "../types/besoin";
+import { Etat_Besoin, Role_Validateur, Statut } from "../types/besoin";
 
 // ── Labels (miroir de GetEnumDescription C#) ────────────────
 

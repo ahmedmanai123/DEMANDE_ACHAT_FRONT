@@ -61,16 +61,17 @@ export function useBesoinList() {
 	);
 
 	// Recharge automatique quand le filtre change
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		load(filter);
 	}, [filter]);
 
 	const updateFilter = useCallback((patch: Partial<DA_BESOINDto>) => {
-		setFilter((prev) => ({ ...prev, ...patch, pageIndex: 1 }));
+		setFilter((prev: Partial<DA_BESOINDto>) => ({ ...prev, ...patch, pageIndex: 1 }));
 	}, []);
 
 	const changePage = useCallback((pageIndex: number, pageSize?: number) => {
-		setFilter((prev) => ({ ...prev, pageIndex, ...(pageSize ? { pageSize } : {}) }));
+		setFilter((prev: Partial<DA_BESOINDto>) => ({ ...prev, pageIndex, ...(pageSize ? { pageSize } : {}) }));
 	}, []);
 
 	const exportExcel = useCallback(async () => {

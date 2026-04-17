@@ -30,9 +30,20 @@ const useUserStore = create<UserStore>()(
 				},
 				setUserToken: (userToken) => {
 					set({ userToken });
+					if (userToken.accessToken) {
+						localStorage.setItem("token", userToken.accessToken);
+						localStorage.setItem("accessToken", userToken.accessToken);
+					}
+					if (userToken.refreshToken) {
+						localStorage.setItem("refreshToken", userToken.refreshToken);
+					}
 				},
 				clearUserInfoAndToken() {
 					set({ userInfo: {}, userToken: {} });
+					localStorage.removeItem("token");
+					localStorage.removeItem("accessToken");
+					localStorage.removeItem("refreshToken");
+					sessionStorage.removeItem("token");
 				},
 			},
 		}),
@@ -67,7 +78,8 @@ export const useSignIn = () => {
 			setUserToken({ accessToken, refreshToken });
 			setUserInfo(user);
 		} catch (err) {
-			toast.error(err.message, {
+			const message = err instanceof Error ? err.message : "Connexion impossible";
+			toast.error(message, {
 				position: "top-center",
 			});
 			throw err;

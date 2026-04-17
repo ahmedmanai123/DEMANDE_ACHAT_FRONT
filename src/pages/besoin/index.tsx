@@ -12,19 +12,18 @@ export default function BesoinPage() {
 		setView("form");
 	};
 
+	const handleView = (b_No: number) => {
+		setEditId(b_No);
+		setView("form");
+	};
+
 	const handleBack = () => {
 		setEditId(0);
 		setView("list");
 	};
 
 	return view === "list" ? (
-		<BesoinList
-			onEdit={handleEdit}
-			onNew={() => handleEdit(0)}
-			onView={function (b_No: number): void {
-				throw new Error("Function not implemented.");
-			}}
-		/>
+		<BesoinList onEdit={handleEdit} onNew={() => handleEdit(0)} onView={handleView} />
 	) : (
 		<BesoinForm b_No={editId} onBack={handleBack} />
 	);

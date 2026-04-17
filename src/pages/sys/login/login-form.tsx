@@ -1,4 +1,3 @@
-import { DB_USER } from "@/_mock/assets_backup";
 import type { SignInReq } from "@/api/services/userService";
 import { Icon } from "@/components/icon";
 import { GLOBAL_CONFIG } from "@/global-config";
@@ -27,8 +26,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
 	const form = useForm<SignInReq>({
 		defaultValues: {
-			username: DB_USER[0].username,
-			password: DB_USER[0].password,
+			username: "",
+			password: "",
 		},
 	});
 
@@ -64,7 +63,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 							<FormItem>
 								<FormLabel>{t("sys.login.userName")}</FormLabel>
 								<FormControl>
-									<Input placeholder={DB_USER.map((user) => user.username).join("/")} {...field} />
+									<Input placeholder={t("sys.login.accountPlaceholder")} {...field} />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -79,7 +78,12 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 							<FormItem>
 								<FormLabel>{t("sys.login.password")}</FormLabel>
 								<FormControl>
-									<Input type="password" placeholder={DB_USER[0].password} {...field} suppressHydrationWarning />
+									<Input
+										type="password"
+										placeholder={t("sys.login.passwordPlaceholder")}
+										{...field}
+										suppressHydrationWarning
+									/>
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -101,24 +105,34 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 								{t("sys.login.rememberMe")}
 							</label>
 						</div>
-						<Button variant="link" onClick={() => setLoginState(LoginStateEnum.RESET_PASSWORD)} size="sm">
+						<Button type="button" variant="link" onClick={() => setLoginState(LoginStateEnum.RESET_PASSWORD)} size="sm">
 							{t("sys.login.forgetPassword")}
 						</Button>
 					</div>
 
 					{/* 登录按钮 */}
-					<Button type="submit" className="w-full">
+					<Button type="submit" className="w-full" disabled={loading}>
 						{loading && <Loader2 className="animate-spin mr-2" />}
 						{t("sys.login.loginButton")}
 					</Button>
 
 					{/* 手机登录/二维码登录 */}
 					<div className="grid gap-4 sm:grid-cols-2">
-						<Button variant="outline" className="w-full" onClick={() => setLoginState(LoginStateEnum.MOBILE)}>
+						<Button
+							type="button"
+							variant="outline"
+							className="w-full"
+							onClick={() => setLoginState(LoginStateEnum.MOBILE)}
+						>
 							<Icon icon="uil:mobile-android" size={20} />
 							{t("sys.login.mobileSignInFormTitle")}
 						</Button>
-						<Button variant="outline" className="w-full" onClick={() => setLoginState(LoginStateEnum.QR_CODE)}>
+						<Button
+							type="button"
+							variant="outline"
+							className="w-full"
+							onClick={() => setLoginState(LoginStateEnum.QR_CODE)}
+						>
 							<Icon icon="uil:qrcode-scan" size={20} />
 							{t("sys.login.qrSignInFormTitle")}
 						</Button>
@@ -129,13 +143,13 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 						<span className="relative z-10 bg-background px-2 text-muted-foreground">{t("sys.login.otherSignIn")}</span>
 					</div>
 					<div className="flex cursor-pointer justify-around text-2xl">
-						<Button variant="ghost" size="icon">
+						<Button type="button" variant="ghost" size="icon">
 							<Icon icon="mdi:github" size={24} />
 						</Button>
-						<Button variant="ghost" size="icon">
+						<Button type="button" variant="ghost" size="icon">
 							<Icon icon="mdi:wechat" size={24} />
 						</Button>
-						<Button variant="ghost" size="icon">
+						<Button type="button" variant="ghost" size="icon">
 							<Icon icon="ant-design:google-circle-filled" size={24} />
 						</Button>
 					</div>
@@ -143,7 +157,12 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 					{/* 注册 */}
 					<div className="text-center text-sm">
 						{t("sys.login.noAccount")}
-						<Button variant="link" className="px-1" onClick={() => setLoginState(LoginStateEnum.REGISTER)}>
+						<Button
+							type="button"
+							variant="link"
+							className="px-1"
+							onClick={() => setLoginState(LoginStateEnum.REGISTER)}
+						>
 							{t("sys.login.signUpFormTitle")}
 						</Button>
 					</div>

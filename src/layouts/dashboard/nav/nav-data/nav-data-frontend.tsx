@@ -26,6 +26,11 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/besoins",
 				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
 			},
+			{
+				title: "sys.nav.parametres",
+				path: "/parametres",
+				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
+			},
 		],
 	},
 	{

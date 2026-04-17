@@ -1,11 +1,11 @@
-// src/pages/besoin/BesoinList.tsx
-import { useEffect } from "react";
+import { EditOutlined, EyeOutlined, FileExcelOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Button, Input, Select, Space, Tag, Tooltip } from "antd";
-import { PlusOutlined, EditOutlined, EyeOutlined, FileExcelOutlined, ReloadOutlined } from "@ant-design/icons";
-import ProDataGrid, { AntColDef } from "@/pages/article/ProDataGrid";
-import type { IBesoin } from "@/types/besoin";
+import { useEffect } from "react";
+import ProDataGrid, { type AntColDef } from "@/pages/article/ProDataGrid";
+import * as besoinService from "@/services/besoinService";
 import { useBesoinStore } from "@/store/useBesoinStore";
-import * as besoinService from "@/services/besoinservice";
+import { Etat_Besoin, type IBesoin } from "@/types/besoin";
+import { ETAT_BESOIN_LABELS } from "@/utils/besoin.utils";
 
 const { Option } = Select;
 
@@ -15,88 +15,83 @@ interface Props {
 	onNew: () => void;
 }
 
-// Couleurs états
 const ETAT_COLORS: Record<number, string> = {
+	[-1]: "default",
 	0: "default",
 	1: "blue",
 	2: "orange",
 	3: "cyan",
-	4: "purple",
-	5: "green",
-	6: "red",
-	7: "volcano",
-	8: "gold",
-	9: "lime",
-	10: "magenta",
-};
-
-const ETAT_LABELS: Record<number, string> = {
-	0: "Tous",
-	1: "En cours",
-	2: "Clôturé",
-	3: "En cours de validation",
-	4: "À acheter",
-	5: "Validé",
-	6: "Refusé",
-	7: "À rectifier",
-	8: "Non pris en charge",
-	9: "Acheté",
-	10: "En attente de validation",
+	4: "gold",
+	5: "red",
+	6: "green",
+	7: "magenta",
+	8: "volcano",
+	9: "purple",
+	10: "lime",
 };
 
 export default function BesoinList({ onEdit, onView, onNew }: Props) {
 	const { besoins, totalCount, loading, filter, setFilter, fetchBesoins } = useBesoinStore();
 
-	// ✅ éviter boucle infinie
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
-		fetchBesoins();
-	}, [filter.pageIndex, filter.pageSize, filter.b_Numero, filter.b_Titre, filter.b_Demandeur, filter.b_Etat_Besoin]);
+		void fetchBesoins();
+	}, [
+		fetchBesoins,
+		filter.pageIndex,
+		filter.pageSize,
+		filter.b_Numero,
+		filter.b_Titre,
+		filter.b_Demandeur,
+		filter.b_Etat_Besoin,
+	]);
 
 	const columns: AntColDef<IBesoin>[] = [
-		{ field: "b_Numero", headerName: "Numéro", width: 120 },
-		{ field: "b_Titre", headerName: "Titre", width: 200 },
-		{ field: "b_Description", headerName: "Description", width: 250 },
-		{ field: "b_Demandeur", headerName: "Demandeur", width: 150 },
+		{ field: "b_Numero", headerName: "Numero", width: 130 },
+		{ field: "b_Titre", headerName: "Titre", width: 220 },
+		{ field: "b_Description", headerName: "Description", width: 280 },
+		{ field: "b_Demandeur", headerName: "Demandeur", width: 160 },
 		{
 			field: "b_Date",
 			headerName: "Date",
-			width: 130,
+			width: 140,
 			renderCell: ({ value }) => (value ? new Date(value as string).toLocaleDateString("fr-FR") : "-"),
 		},
-		{ field: "cA_Intitule", headerName: "Affaire", width: 160 },
-		{ field: "dE_Intitule", headerName: "Dépôt", width: 130 },
+		{ field: "cA_Intitule", headerName: "Affaire", width: 180 },
+		{ field: "dE_Intitule", headerName: "Depot", width: 140 },
 		{
 			field: "b_Etat_Besoin",
-			headerName: "État",
-			width: 170,
+			headerName: "Etat",
+			width: 200,
 			renderCell: ({ value }) => (
-				<Tag color={ETAT_COLORS[value as number] ?? "default"}>{ETAT_LABELS[value as number]}</Tag>
+				<Tag color={ETAT_COLORS[value as number] ?? "default"}>
+					{ETAT_BESOIN_LABELS[value as number] ?? `Etat ${value as number}`}
+				</Tag>
 			),
 		},
 		{
 			key: "actions",
 			headerName: "Actions",
-			width: 120,
+			width: 130,
 			renderCell: ({ row }) => (
 				<Space>
 					<Tooltip title="Voir">
 						<Button
 							size="small"
 							icon={<EyeOutlined />}
-							onClick={(e) => {
-								e.stopPropagation();
-								onView(row.b_No);
+							onClick={(event) => {
+								event.stopPropagation();
+								onView(Number(row.b_No ?? row.B_No ?? 0));
 							}}
 						/>
 					</Tooltip>
-
 					<Tooltip title="Modifier">
 						<Button
 							size="small"
 							icon={<EditOutlined />}
-							onClick={(e) => {
-								e.stopPropagation();
-								onEdit(row.b_No);
+							onClick={(event) => {
+								event.stopPropagation();
+								onEdit(Number(row.b_No ?? row.B_No ?? 0));
 							}}
 						/>
 					</Tooltip>
@@ -107,22 +102,19 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 
 	const handleExportExcel = async () => {
 		try {
-			const res = await besoinService.exportBesoinExcel(filter);
-			const blob = new Blob([res.data], {
-				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			});
+			const response = await besoinService.exportBesoinExcel(filter);
+			const fileName =
+				response.headers["file-name"] ||
+				`Liste_Demandes_Besoin_${new Date().toLocaleDateString("fr-FR").replace(/\//g, "-")}.xlsx`;
 
-			const filename =
-				res.headers["file-name"] || `Liste_Besoins_${new Date().toLocaleDateString("fr-FR").replace(/\//g, "-")}.xlsx`;
-
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = filename;
-			a.click();
+			const url = URL.createObjectURL(response.data);
+			const anchor = document.createElement("a");
+			anchor.href = url;
+			anchor.download = fileName;
+			anchor.click();
 			URL.revokeObjectURL(url);
-		} catch (err) {
-			console.error("Erreur export Excel", err);
+		} catch (error) {
+			console.error("Erreur export Excel", error);
 		}
 	};
 
@@ -130,42 +122,38 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 		<div style={{ padding: 16 }}>
 			<Space wrap style={{ marginBottom: 12 }}>
 				<Input
-					placeholder="Numéro"
-					value={filter.b_Numero ?? ""}
-					onChange={(e) => setFilter({ b_Numero: e.target.value })}
+					placeholder="Numero"
+					value={String(filter.b_Numero ?? filter.B_Numero ?? "")}
+					onChange={(event) => setFilter({ b_Numero: event.target.value })}
 				/>
 				<Input
 					placeholder="Titre"
-					value={filter.b_Titre ?? ""}
-					onChange={(e) => setFilter({ b_Titre: e.target.value })}
+					value={String(filter.b_Titre ?? filter.B_Titre ?? "")}
+					onChange={(event) => setFilter({ b_Titre: event.target.value })}
 				/>
 				<Input
 					placeholder="Demandeur"
-					value={filter.b_Demandeur ?? ""}
-					onChange={(e) => setFilter({ b_Demandeur: e.target.value })}
+					value={String(filter.b_Demandeur ?? filter.B_Demandeur ?? "")}
+					onChange={(event) => setFilter({ b_Demandeur: event.target.value })}
 				/>
-
 				<Select
-					style={{ width: 200 }}
-					value={filter.b_Etat_Besoin ?? 0}
-					onChange={(val) => setFilter({ b_Etat_Besoin: val })}
+					style={{ width: 220 }}
+					value={Number(filter.b_Etat_Besoin ?? filter.B_Etat_Besoin ?? Etat_Besoin.Tous)}
+					onChange={(value) => setFilter({ b_Etat_Besoin: value })}
 				>
-					{Object.entries(ETAT_LABELS).map(([k, v]) => (
-						<Option key={k} value={Number(k)}>
-							{v}
+					{Object.entries(ETAT_BESOIN_LABELS).map(([key, label]) => (
+						<Option key={key} value={Number(key)}>
+							{label}
 						</Option>
 					))}
 				</Select>
-
-				<Button icon={<ReloadOutlined />} onClick={fetchBesoins}>
+				<Button icon={<ReloadOutlined />} onClick={() => void fetchBesoins()}>
 					Actualiser
 				</Button>
-
 				<Button type="primary" icon={<PlusOutlined />} onClick={onNew}>
 					Nouveau
 				</Button>
-
-				<Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
+				<Button icon={<FileExcelOutlined />} onClick={() => void handleExportExcel()}>
 					Export Excel
 				</Button>
 			</Space>
@@ -180,8 +168,8 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 					pageSize: filter.pageSize ?? 20,
 				}}
 				onPaginationModelChange={({ page, pageSize }) => setFilter({ pageIndex: page + 1, pageSize })}
-				getRowId={(row) => row.b_No}
-				onRowDoubleClick={({ row }) => onEdit(row.b_No)}
+				getRowId={(row) => Number(row.b_No ?? row.B_No ?? 0)}
+				onRowDoubleClick={({ row }) => onEdit(Number(row.b_No ?? row.B_No ?? 0))}
 			/>
 		</div>
 	);
