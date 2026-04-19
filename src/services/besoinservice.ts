@@ -2,6 +2,7 @@ import apiClient from "@/api/apiClient";
 import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import type {
 	AFFECTATION_DEMANDEDto,
+	ChampLibreDto,
 	DA_BESOIN_AACHETERDto,
 	DA_BESOIN_ARTICLEDto,
 	DA_BESOINDto,
@@ -101,6 +102,28 @@ async function postBlobWithFallback(
 	throw new Error(getErrorMessage(lastError));
 }
 
+async function getBlobWithFallback(
+	pathOrUrl: string,
+	params?: Record<string, unknown>,
+	config?: AxiosRequestConfig,
+): Promise<AxiosResponse<Blob>> {
+	let lastError: unknown;
+	for (const url of candidateUrls(pathOrUrl)) {
+		try {
+			return await apiClient.get<Blob>(url, {
+				...(config || {}),
+				params,
+				responseType: "blob",
+			});
+		} catch (error) {
+			lastError = error;
+			if (shouldTryNext(error)) continue;
+			throw new Error(getErrorMessage(error));
+		}
+	}
+	throw new Error(getErrorMessage(lastError));
+}
+
 async function deleteWithFallback<T>(pathOrUrl: string, config?: AxiosRequestConfig): Promise<T> {
 	let lastError: unknown;
 	for (const url of candidateUrls(pathOrUrl)) {
@@ -116,20 +139,35 @@ async function deleteWithFallback<T>(pathOrUrl: string, config?: AxiosRequestCon
 	throw new Error(getErrorMessage(lastError));
 }
 
+const extractChampsLibresMeta = (record: Record<string, unknown>): Record<string, unknown> | undefined => {
+	const raw = record.ChampsLibres ?? record.champsLibres;
+	return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : undefined;
+};
+
 const normalizeGrid = <T>(raw: unknown): GridResponse<T> => {
 	if (Array.isArray(raw)) return { data: raw as T[], itemsCount: raw.length };
 
 	const root = toRecord(raw);
+	const rootChamps = extractChampsLibresMeta(root);
 	const topData = root.data;
 	if (Array.isArray(topData)) {
 		const count = typeof root.itemsCount === "number" ? root.itemsCount : topData.length;
-		return { data: topData as T[], itemsCount: count };
+		return {
+			data: topData as T[],
+			itemsCount: count,
+			...(rootChamps ? { ChampsLibres: rootChamps } : {}),
+		};
 	}
 
 	const nested = toRecord(topData);
+	const nestedChamps = extractChampsLibresMeta(nested) ?? rootChamps;
 	if (Array.isArray(nested.data)) {
 		const count = typeof nested.itemsCount === "number" ? nested.itemsCount : nested.data.length;
-		return { data: nested.data as T[], itemsCount: count };
+		return {
+			data: nested.data as T[],
+			itemsCount: count,
+			...(nestedChamps ? { ChampsLibres: nestedChamps } : {}),
+		};
 	}
 
 	return { data: [], itemsCount: 0 };
@@ -181,6 +219,8 @@ export const getBesoinById = async (id: number | string): Promise<DA_BESOINDto> 
 
 export const getTypesBesoinUsers = async (): Promise<IBesoinType[]> => {
 	const customUrls = [
+		// Aligné sur l’API REST Besoin (équivalent MVC GetTypesBesoin_Users)
+		"/api/besoin/types-besoin-utilisateur",
 		"/api/besoin-type/users",
 		"/api/besoin-type/utilisateurs",
 		"/api/besoin-type",
@@ -229,8 +269,17 @@ export const deleteBesoin = async (id: number | string): Promise<void> => {
 export const getLastNumero = async (): Promise<{ numero: string }> =>
 	getWithFallback<{ numero: string }>("last-numero");
 
-export const existTypeBesoinUser = async (): Promise<{ exist_Type_Besoin: boolean }> =>
-	getWithFallback<{ exist_Type_Besoin: boolean }>("exist-type-besoin-user");
+export type ExistTypeBesoinUserResponse = {
+	exist_Type_Besoin?: boolean;
+	Exist_Type_Besoin?: boolean;
+	isValid?: boolean;
+	IsValid?: boolean;
+	Message?: string;
+	message?: string;
+};
+
+export const existTypeBesoinUser = async (): Promise<ExistTypeBesoinUserResponse> =>
+	getWithFallback<ExistTypeBesoinUserResponse>("exist-type-besoin-user");
 
 export const getArticlesBesoin = async (
 	params: Partial<DA_BESOIN_ARTICLEDto> = {},
@@ -272,6 +321,20 @@ export const getInfoTypeBesoin = async (bT_Id: number): Promise<IBesoinType | nu
 	getWithFallback<IBesoinType | null>("info-type-besoin", { bT_Id });
 
 export const getArticleDivers = async (bT_Id: number) => getWithFallback<unknown>("article-divers", { bT_Id });
+
+export const getChampsLibreBesoin = async (bT_Id: number, b_No: number): Promise<ChampLibreDto[]> => {
+	const response = await getWithFallback<unknown>("champs-libres/besoin", { bT_Id, b_No });
+	const record = toRecord(response);
+	const champs = record.champs ?? record.Champs ?? record.data;
+	return Array.isArray(champs) ? (champs as ChampLibreDto[]) : [];
+};
+
+export const getChampsLibreArticleBesoin = async (bT_Id: number, bA_No: number): Promise<ChampLibreDto[]> => {
+	const response = await getWithFallback<unknown>("champs-libres/article-besoin", { bT_Id, bA_No });
+	const record = toRecord(response);
+	const champs = record.champs ?? record.Champs ?? record.data;
+	return Array.isArray(champs) ? (champs as ChampLibreDto[]) : [];
+};
 
 export const getCircuitValidation = async (
 	bT_Id: number,
@@ -357,6 +420,13 @@ export const genererDocument = async (b_No: number, tP_No: TypeSage, type: Type_
 
 export const getTableauxComparatifs = async (b_No: number) => getWithFallback<unknown>(`${b_No}/tableaux-comparatifs`);
 
+export const exportTableauxComparatifsExcel = async (b_No: number, b_Numero: string): Promise<void> => {
+	const response = await getBlobWithFallback(`${b_No}/tableaux-comparatifs/export-excel`, { b_Numero });
+	const fallbackName = `Tableaux_Comparatifs_${b_Numero || b_No}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+	const fileName = response.headers["file-name"] || fallbackName;
+	triggerBlobDownload(response.data, fileName);
+};
+
 export const exportBesoinExcel = async (filter: Partial<DA_BESOINDto>): Promise<AxiosResponse<Blob>> =>
 	postBlobWithFallback("export-excel", filter);
 
@@ -413,6 +483,7 @@ export const gestionDemandeService = {
 	genererAffectationFournisseur,
 	genererDocument,
 	getTableauxComparatifs,
+	exportTableauxComparatifsExcel,
 	exportExcel: async (filter: Partial<DA_BESOIN_AACHETERDto>): Promise<void> => {
 		const response = await exportDemandesAAcheterExcel(filter);
 		const fallbackName = `Demandes_AAcheter_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -426,4 +497,15 @@ export const referenceService = {
 	getAffairesAutoriser,
 	getArticleDivers,
 	getInfoTypeBesoin,
+	getChampsLibreBesoin,
+	getChampsLibreArticleBesoin,
 };
+
+export const getBesoinOrigine = async (b_No: number): Promise<DA_BESOINDto[]> =>
+	getWithFallback<DA_BESOINDto[]>(`${b_No}/besoin-origine`);
+
+export const getArticlesSansFournisseur = async (
+	b_No: number,
+	generation: boolean,
+): Promise<{ messageArticle: string }> =>
+	getWithFallback<{ messageArticle: string }>(`${b_No}/articles-sans-fournisseur`, { generation });

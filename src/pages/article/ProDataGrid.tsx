@@ -1,5 +1,4 @@
 // src/pages/article/ProDataGrid.tsx
-import { useRef } from "react";
 import { Table } from "antd";
 import type { ColumnsType, ColumnType } from "antd/es/table";
 import type { ReactNode } from "react";
@@ -26,6 +25,8 @@ interface ProDataGridProps<T extends object> {
 	onRowClick?: (params: { row: T }) => void;
 	onRowDoubleClick?: (params: { row: T }) => void;
 	getRowId?: (row: T) => string | number;
+	/** Sélection visuelle de la ligne (équivalent `.selected-row` jsGrid). */
+	selectedRowKey?: string | number | null;
 }
 
 function toAntColumns<T extends object>(cols: AntColDef<T>[]): ColumnsType<T> {
@@ -64,8 +65,8 @@ export default function ProDataGrid<T extends object>({
 	onRowClick,
 	onRowDoubleClick,
 	getRowId,
+	selectedRowKey,
 }: ProDataGridProps<T>) {
-	const selectedRowRef = useRef<T | null>(null);
 	const antColumns = toAntColumns(columns);
 
 	return (
@@ -87,7 +88,6 @@ export default function ProDataGrid<T extends object>({
 			}}
 			onRow={(record) => ({
 				onClick: () => {
-					selectedRowRef.current = record;
 					onRowClick?.({ row: record });
 				},
 				onDoubleClick: () => {
@@ -95,7 +95,10 @@ export default function ProDataGrid<T extends object>({
 				},
 				style: { cursor: "pointer" },
 			})}
-			rowClassName={(record) => (selectedRowRef.current === record ? "ant-table-row-selected" : "")}
+			rowClassName={(record) => {
+				if (selectedRowKey == null || !getRowId) return "";
+				return String(getRowId(record)) === String(selectedRowKey) ? "ant-table-row-selected" : "";
+			}}
 		/>
 	);
 }

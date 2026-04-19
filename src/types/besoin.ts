@@ -17,6 +17,15 @@ export interface GridResponse<T> {
 	champsLibres?: Record<string, unknown>;
 }
 
+// Champs libres (structure pilotée par le back; on garde flexible)
+export type ChampLibreValue = string | number | boolean | null;
+
+export interface ChampLibreDto {
+	CL_ChampLibre_View?: string;
+	CL_ChampValue?: ChampLibreValue;
+	[key: string]: unknown;
+}
+
 export enum DegreeImportance {
 	NonDefinie = 0,
 	Basse = 1,

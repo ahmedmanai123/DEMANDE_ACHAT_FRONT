@@ -8,6 +8,36 @@ import { Etat_Besoin, Role_Validateur, Statut } from "../types/besoin";
 
 // ── Labels (miroir de GetEnumDescription C#) ────────────────
 
+/** Barre fine sous l’état (équivalent progress + couleurs de la vue Razor / jsGrid). */
+export function getEtatBesoinProgressBar(etat: number): { widthPct: number; barColor: string } {
+	switch (etat) {
+		case 0:
+			return { widthPct: 10, barColor: "#6c757d" };
+		case 1:
+			return { widthPct: 20, barColor: "#fd7e14" };
+		case 2:
+			return { widthPct: 40, barColor: "#fd7e14" };
+		case 7:
+			return { widthPct: 50, barColor: "#fd7e14" };
+		case 3:
+			return { widthPct: 50, barColor: "#0d6efd" };
+		case 4:
+			return { widthPct: 70, barColor: "#198754" };
+		case 5:
+			return { widthPct: 95, barColor: "#dc3545" };
+		case 6:
+			return { widthPct: 95, barColor: "#198754" };
+		case 8:
+			return { widthPct: 65, barColor: "#fd7e14" };
+		case 9:
+			return { widthPct: 100, barColor: "#dc3545" };
+		case 10:
+			return { widthPct: 50, barColor: "#dc3545" };
+		default:
+			return { widthPct: 15, barColor: "#adb5bd" };
+	}
+}
+
 export const ETAT_BESOIN_LABELS: Record<number, string> = {
 	[-1]: "Tous",
 	0: "Brouillon",

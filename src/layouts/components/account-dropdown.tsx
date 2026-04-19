@@ -36,12 +36,20 @@ export default function AccountDropdown() {
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button variant="ghost" size="icon" className="rounded-full">
-					<img className="h-6 w-6 rounded-full" src={avatar} alt="" />
+					{avatar ? (
+						<img className="h-6 w-6 rounded-full" src={avatar} alt="" />
+					) : (
+						<span className="bg-muted flex h-6 w-6 rounded-full" aria-hidden />
+					)}
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-56">
 				<div className="flex items-center gap-2 p-2">
-					<img className="h-10 w-10 rounded-full" src={avatar} alt="" />
+					{avatar ? (
+						<img className="h-10 w-10 rounded-full" src={avatar} alt="" />
+					) : (
+						<span className="bg-muted flex h-10 w-10 rounded-full" aria-hidden />
+					)}
 					<div className="flex flex-col items-start">
 						<div className="text-text-primary text-sm font-medium">{username}</div>
 						<div className="text-text-secondary text-xs">{email}</div>

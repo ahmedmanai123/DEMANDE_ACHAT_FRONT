@@ -27,7 +27,24 @@ export default function Icon({
 }: IconProps) {
 	// Handle URL SVG
 	if (icon.startsWith("url:")) {
-		const url = icon.replace("url:", "");
+		const url = icon.replace("url:", "").trim();
+		if (!url) {
+			return (
+				<IconifyIcon
+					icon="mdi:help-circle-outline"
+					width={size}
+					height={size}
+					className={cn("inline-block", className)}
+					style={{
+						color,
+						height: size,
+						width: size,
+						...style,
+					}}
+					{...props}
+				/>
+			);
+		}
 		return (
 			<img
 				src={url}
