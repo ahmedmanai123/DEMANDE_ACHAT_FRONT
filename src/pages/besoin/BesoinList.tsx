@@ -6,7 +6,7 @@ import "dayjs/locale/fr";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ProDataGrid, { type AntColDef } from "@/pages/article/ProDataGrid";
-import * as besoinService from "@/services/besoinService";
+import * as besoinService from "@/services/besoinservice";
 import { useBesoinStore } from "@/store/useBesoinStore";
 import { Etat_Besoin, type IBesoin } from "@/types/besoin";
 import { ETAT_BESOIN_LABELS, getEtatBesoinProgressBar } from "@/utils/besoin.utils";

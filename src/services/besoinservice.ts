@@ -209,6 +209,8 @@ const getArrayFromPayload = <T>(raw: unknown, ...keys: string[]): T[] => {
 	return [];
 };
 
+// ─── Besoins ─────────────────────────────────────────────────────────────────
+
 export const getBesoins = async (params: Partial<DA_BESOINDto> = {}): Promise<GridResponse<DA_BESOINDto>> => {
 	const response = await getWithFallback<unknown>("", params as Record<string, unknown>);
 	return normalizeGrid<DA_BESOINDto>(response);
@@ -219,7 +221,6 @@ export const getBesoinById = async (id: number | string): Promise<DA_BESOINDto> 
 
 export const getTypesBesoinUsers = async (): Promise<IBesoinType[]> => {
 	const customUrls = [
-		// Aligné sur l’API REST Besoin (équivalent MVC GetTypesBesoin_Users)
 		"/api/besoin/types-besoin-utilisateur",
 		"/api/besoin-type/users",
 		"/api/besoin-type/utilisateurs",
@@ -281,6 +282,8 @@ export type ExistTypeBesoinUserResponse = {
 export const existTypeBesoinUser = async (): Promise<ExistTypeBesoinUserResponse> =>
 	getWithFallback<ExistTypeBesoinUserResponse>("exist-type-besoin-user");
 
+// ─── Articles besoin ──────────────────────────────────────────────────────────
+
 export const getArticlesBesoin = async (
 	params: Partial<DA_BESOIN_ARTICLEDto> = {},
 ): Promise<GridResponse<DA_BESOIN_ARTICLEDto>> => {
@@ -308,8 +311,12 @@ export const getTracabiliteArticleBesoin = async (
 	return normalizeGrid<DA_TRACABILITEBESOINARTICLEDto>(response);
 };
 
+// ─── Fournisseur principal (déclaration unique) ───────────────────────────────
+
 export const getFournisseurPrincipal = async (bA_No: number): Promise<{ cT_Num: string }> =>
 	getWithFallback<{ cT_Num: string }>(`articles/${bA_No}/fournisseur-principal`);
+
+// ─── Référentiel ──────────────────────────────────────────────────────────────
 
 export const getDepotsAutoriser = async (bT_Id: number, b_IdDemandeur: string): Promise<IDepot[]> =>
 	getWithFallback<IDepot[]>("depots-autoriser", { bT_Id, b_IdDemandeur });
@@ -335,6 +342,8 @@ export const getChampsLibreArticleBesoin = async (bT_Id: number, bA_No: number):
 	const champs = record.champs ?? record.Champs ?? record.data;
 	return Array.isArray(champs) ? (champs as ChampLibreDto[]) : [];
 };
+
+// ─── Validation ───────────────────────────────────────────────────────────────
 
 export const getCircuitValidation = async (
 	bT_Id: number,
@@ -386,6 +395,8 @@ export const affectationAcheteur = async (b_No: number, typeValidation = false) 
 		params: { typeValidation },
 	});
 
+// ─── Gestion des demandes ─────────────────────────────────────────────────────
+
 export const getDemandesAAcheter = async (
 	filter: Partial<DA_BESOIN_AACHETERDto>,
 ): Promise<GridResponse<DA_BESOIN_AACHETERDto>> => {
@@ -394,6 +405,12 @@ export const getDemandesAAcheter = async (
 };
 
 export const getDetailsDemandeAAcheter = async (id: number) => getWithFallback<unknown>(`demandes-aacheter/${id}`);
+
+export const getDocumentsNonValider = async (type: number, ep_Tiers: string) =>
+	getWithFallback<Array<{ Text?: string; Value?: string | number }>>("documents-non-valider", { type, ep_Tiers });
+
+export const getTiersDocumentsNonValider = async (aD_No: number): Promise<string> =>
+	getWithFallback<string>("tiers-documents-non-valider", { aD_No });
 
 export const getAffectationDetails = async (
 	filter: Partial<AFFECTATION_DEMANDEDto>,
@@ -418,6 +435,30 @@ export const genererDocument = async (b_No: number, tP_No: TypeSage, type: Type_
 		params: { tP_No, type },
 	});
 
+export const getArticlesSansFournisseur = async (
+	b_No: number,
+	generation: boolean,
+): Promise<{ messageArticle: string }> =>
+	getWithFallback<{ messageArticle: string }>(`${b_No}/articles-sans-fournisseur`, { generation });
+
+// ─── Vérification clôture et affichage affectation (migration Razor → React) ──
+
+/**
+ * Équivalent ViewBag.Verifier_Demande_Totalement_Cloturer
+ * Endpoint à ajouter dans BesoinController : GET /api/besoin/{b_No}/verifier-cloturer
+ */
+export const verifierDemandeCloturer = async (b_No: number, tP_No: number): Promise<boolean> =>
+	getWithFallback<boolean>(`${b_No}/verifier-cloturer`, { tP_No });
+
+/**
+ * Équivalent AffichieraffectionDemande (ViewBag + AJAX MVC)
+ * Endpoint existant dans BesoinController : GET /api/besoin/affichier-affection-demande
+ */
+export const affichieraffectionDemande = async (b_No: number, bT_Id: number, type: number): Promise<boolean> =>
+	getWithFallback<boolean>("affichier-affection-demande", { b_No, bT_Id, type });
+
+// ─── Tableaux comparatifs ─────────────────────────────────────────────────────
+
 export const getTableauxComparatifs = async (b_No: number) => getWithFallback<unknown>(`${b_No}/tableaux-comparatifs`);
 
 export const exportTableauxComparatifsExcel = async (b_No: number, b_Numero: string): Promise<void> => {
@@ -433,6 +474,97 @@ export const exportBesoinExcel = async (filter: Partial<DA_BESOINDto>): Promise<
 export const exportDemandesAAcheterExcel = async (
 	filter: Partial<DA_BESOIN_AACHETERDto>,
 ): Promise<AxiosResponse<Blob>> => postBlobWithFallback("demandes-aacheter/export-excel", filter);
+
+// ─── Retour besoin ────────────────────────────────────────────────────────────
+
+const RETOUR_BASES = ["/api/retourbesoin", "/api/RetourBesoin", "/RetourBesoin"];
+
+const retourCandidateUrls = (pathOrUrl: string) => {
+	if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) return [pathOrUrl];
+	if (pathOrUrl.startsWith("/api/") || pathOrUrl.startsWith("/RetourBesoin")) return [pathOrUrl];
+	const normalized = normalizePath(pathOrUrl);
+	return RETOUR_BASES.map((base) => (normalized ? `${base}/${normalized}` : base));
+};
+
+async function getRetourWithFallback<T>(
+	pathOrUrl: string,
+	params?: Record<string, unknown>,
+	config?: AxiosRequestConfig,
+): Promise<T> {
+	let lastError: unknown;
+	for (const url of retourCandidateUrls(pathOrUrl)) {
+		try {
+			const response = await apiClient.get<T>(url, { ...(config || {}), params });
+			return response.data as T;
+		} catch (error) {
+			lastError = error;
+			if (shouldTryNext(error)) continue;
+			throw new Error(getErrorMessage(error));
+		}
+	}
+	throw new Error(getErrorMessage(lastError));
+}
+
+async function postRetourWithFallback<T>(
+	pathOrUrl: string,
+	payload?: unknown,
+	config?: AxiosRequestConfig,
+): Promise<T> {
+	let lastError: unknown;
+	for (const url of retourCandidateUrls(pathOrUrl)) {
+		try {
+			const response = await apiClient.post<T>(url, payload, config);
+			return response.data as T;
+		} catch (error) {
+			lastError = error;
+			if (shouldTryNext(error)) continue;
+			throw new Error(getErrorMessage(error));
+		}
+	}
+	throw new Error(getErrorMessage(lastError));
+}
+
+export const getBesionArticleByBNo = async (b_No: number): Promise<DA_BESOIN_ARTICLEDto[]> =>
+	getRetourWithFallback<DA_BESOIN_ARTICLEDto[]>("GetBesionArticleByB_No", { b_No });
+
+export const getLignePieceParBesoinArticleRetour = async (
+	B_No: number,
+	BA_No: number,
+	AD_ArticleRetour = false,
+): Promise<GridResponse<Record<string, unknown>>> => {
+	const response = await getRetourWithFallback<unknown>("GetLignePieceParBesoinArticle", {
+		B_No,
+		BA_No,
+		AD_ArticleRetour,
+	});
+	return normalizeGrid<Record<string, unknown>>(response);
+};
+
+export const addOrUpdateRetourBesoin = async (rows: Record<string, unknown>[], aD_EtatRetour: number) =>
+	postRetourWithFallback<unknown>("AddOrUpdateRetourBesoin", rows, {
+		params: { aD_EtatRetour },
+	});
+
+export const rejetArticleRetourDemande = async (payload: {
+	v_Id: number;
+	AD_No: number;
+	Motif: string;
+	B_No: number;
+	MR_No: number;
+}) => postRetourWithFallback<unknown>("RejetArticleRetourDemande", null, { params: payload });
+
+export const refuserRetourDemandeBesoin = async (formData: FormData) =>
+	postRetourWithFallback<unknown>("Refuser_RetourDemande_Besoin", formData, {
+		headers: { "Content-Type": "multipart/form-data" },
+	});
+
+export const cloutreGroupeArticle = async (b_No: number, bA_No: number, v_Acheteur: boolean, type: Type_Validation) =>
+	getRetourWithFallback<boolean>("CloutreGroupeArticle", { b_No, bA_No, v_Acheteur, type });
+
+export const getBesoinOrigine = async (b_No: number): Promise<DA_BESOINDto[]> =>
+	getWithFallback<DA_BESOINDto[]>(`${b_No}/besoin-origine`);
+
+// ─── Service objects ──────────────────────────────────────────────────────────
 
 export const besoinService = {
 	getAll: getBesoins,
@@ -484,6 +616,8 @@ export const gestionDemandeService = {
 	genererDocument,
 	getTableauxComparatifs,
 	exportTableauxComparatifsExcel,
+	verifierDemandeCloturer,
+	affichieraffectionDemande,
 	exportExcel: async (filter: Partial<DA_BESOIN_AACHETERDto>): Promise<void> => {
 		const response = await exportDemandesAAcheterExcel(filter);
 		const fallbackName = `Demandes_AAcheter_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -501,11 +635,11 @@ export const referenceService = {
 	getChampsLibreArticleBesoin,
 };
 
-export const getBesoinOrigine = async (b_No: number): Promise<DA_BESOINDto[]> =>
-	getWithFallback<DA_BESOINDto[]>(`${b_No}/besoin-origine`);
-
-export const getArticlesSansFournisseur = async (
-	b_No: number,
-	generation: boolean,
-): Promise<{ messageArticle: string }> =>
-	getWithFallback<{ messageArticle: string }>(`${b_No}/articles-sans-fournisseur`, { generation });
+export const retourBesoinService = {
+	getBesionArticleByBNo,
+	getLignePieceParBesoinArticleRetour,
+	addOrUpdateRetourBesoin,
+	rejetArticleRetourDemande,
+	refuserRetourDemandeBesoin,
+	cloutreGroupeArticle,
+};

@@ -25,6 +25,16 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.besoins",
 				path: "/besoins",
 				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
+				children: [
+					{
+						title: "Demandes de besoin",
+						path: "/besoins",
+					},
+					{
+						title: "Gestion des demandes",
+						path: "/besoins?mode=gestion-demandes",
+					},
+				],
 			},
 			{
 				title: "sys.nav.parametres",

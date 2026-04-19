@@ -2,7 +2,7 @@
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { create } from "zustand";
-import * as besoinService from "@/services/besoinService";
+import * as besoinService from "@/services/besoinservice";
 import { Etat_Besoin, type IBesoin, type IBesoinArticle, type IBesoinFilter } from "@/types/besoin";
 
 dayjs.extend(isoWeek);

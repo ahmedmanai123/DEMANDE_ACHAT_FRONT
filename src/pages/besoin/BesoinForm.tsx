@@ -54,7 +54,7 @@ import {
 	getTypesBesoinUsers,
 	referenceService,
 	validationService,
-} from "@/services/besoinService";
+} from "@/services/besoinservice";
 import { useUserInfo } from "@/store/userStore";
 import type { IArticle } from "@/types/article";
 import {
@@ -439,6 +439,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 		}
 	};
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		if (currentBesoinId > 0) {
 			void loadEditMode(currentBesoinId);
