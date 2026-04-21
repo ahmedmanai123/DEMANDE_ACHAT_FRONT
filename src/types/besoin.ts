@@ -146,9 +146,9 @@ export enum TypeAF {
 }
 
 export enum TypeSage {
-	Demande_Achat = 1,
-	BC_Achat = 2,
-	BC = 3,
+	Demande_Achat = 10,
+	BC_Achat = 12,
+	BC = 13,
 }
 
 export interface DA_VALIDATION {

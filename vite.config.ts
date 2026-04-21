@@ -39,6 +39,11 @@ export default defineConfig(({ mode }) => {
 					changeOrigin: true,
 					secure: false,
 				},
+				"/Document": {
+					target: "https://localhost:7233",
+					changeOrigin: true,
+					secure: false,
+				},
 				"/Parametres": {
 					target: "https://localhost:7233",
 					changeOrigin: true,

@@ -9,5 +9,10 @@ export const routes = [
 		path: "/besoins",
 		component: () => import("@/pages/besoin/index"),
 	},
+	{
+		order: 12,
+		path: "/document",
+		component: () => import("@/pages/document/index"),
+	},
 	//
 ];

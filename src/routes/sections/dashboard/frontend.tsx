@@ -10,6 +10,15 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 		{ path: "besoins", element: Component("/pages/besoin") },
 		{ path: "parametres", element: Component("/pages/parametres") },
 		{
+			path: "document",
+			children: [
+				{ index: true, element: <Navigate to="demandes-prix" replace /> },
+				{ path: "demandes-prix", element: Component("/pages/document") },
+				{ path: "bons-commande", element: Component("/pages/document") },
+				{ path: "details", element: Component("/pages/document") },
+			],
+		},
+		{
 			path: "components",
 			children: [
 				{ index: true, element: <Navigate to="animate" replace /> },
