@@ -1,13 +1,28 @@
 // src/pages/article/ArticleList.tsx
+import {
+	Add as AddIcon,
+	DeleteOutlined as DeleteIcon,
+	EditOutlined as EditIcon,
+} from "@mui/icons-material";
+import {
+	Box,
+	Button,
+	Chip,
+	FormControl,
+	MenuItem,
+	Select,
+	Stack,
+	TextField,
+	Typography,
+} from "@mui/material";
+import type { GridColDef } from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Image, Input, InputNumber, Modal, Select, Space, Table, Tag } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useArticleStore } from "@/store/useArticleStore";
 import type { IArticle, ICatalogue } from "@/types/article";
 
 // ================================================================
-// STYLES AMÉLIORÉS
+// STYLES (Sidebar & Layout only — Table styles handled by MUI DataGrid)
 // ================================================================
 const STYLES = `
   .art-page {
@@ -20,7 +35,6 @@ const STYLES = `
     box-sizing: border-box;
   }
 
-  /* ---- ZONE PRINCIPALE ---- */
   .art-main {
     display: flex;
     gap: 12px;
@@ -29,7 +43,6 @@ const STYLES = `
     overflow: hidden;
   }
 
-  /* ---- SIDEBAR (Design Moderne) ---- */
   .art-sidebar {
     width: 240px;
     background: #fff;
@@ -58,8 +71,6 @@ const STYLES = `
     flex: 1;
     overflow-y: auto;
     padding: 8px 0;
-    
-    /* Scrollbar fine et stylisée */
     scrollbar-width: thin;
     scrollbar-color: #cbd5e0 transparent;
   }
@@ -96,7 +107,7 @@ const STYLES = `
     color: #1a4f78;
     font-weight: 600;
     border-left: 4px solid #1a4f78;
-    padding-left: 10px; /* Compensation pour la bordure */
+    padding-left: 10px;
     border-radius: 4px 8px 8px 4px;
   }
 
@@ -111,7 +122,6 @@ const STYLES = `
     color: #1a4f78;
   }
 
-  /* ---- CARTE TABLE (Ombres et Coins Arrondis) ---- */
   .art-card {
     flex: 1;
     min-width: 0;
@@ -124,7 +134,6 @@ const STYLES = `
     flex-direction: column;
   }
 
-  /* ---- BREADCRUMB HORIZONTAL ---- */
   .art-cat-breadcrumb {
     display: flex;
     align-items: center;
@@ -142,29 +151,6 @@ const STYLES = `
     margin: 0 4px;
   }
 
-  .art-cat-breadcrumb .ant-select {
-    font-size: 13px;
-  }
-  .art-cat-breadcrumb .ant-select-selector {
-    border-radius: 6px !important;
-    border-color: #e2e8f0 !important;
-    background: #fff !important;
-    height: 32px !important;
-    min-height: 32px !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-    transition: all 0.2s;
-  }
-  .art-cat-breadcrumb .ant-select-selector:hover {
-    border-color: #1a4f78 !important;
-  }
-  .art-cat-breadcrumb .ant-select-selection-item {
-    line-height: 30px !important;
-    font-size: 13px !important;
-    color: #2d3748 !important;
-    font-weight: 500;
-  }
-
-  /* ---- TOOLBAR ---- */
   .art-toolbar {
     display: flex;
     align-items: center;
@@ -174,180 +160,16 @@ const STYLES = `
     background: #fff;
     flex-shrink: 0;
   }
-  .art-toolbar-left { display: flex; align-items: center; gap: 12px; }
-  .art-toolbar-title { 
-    font-size: 15px; 
-    font-weight: 700; 
-    color: #1a202c; 
-    letter-spacing: -0.2px;
-  }
-  .art-page-size-wrap { 
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
-    font-size: 12px; 
-    color: #718096; 
-    background: #f7fafc;
-    padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid #edf2f7;
-  }
 
-  /* ---- TABLEAU DESIGN ---- */
-  .art-table .ant-table-thead > tr > th {
-    background: #c4d3df !important; /* Bleu élégant */
-    color: #fff !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    padding: 12px 10px !important;
-    border-right: 1px solid rgba(255,255,255,0.1) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .art-table .ant-table-thead > tr > th::before { display: none !important; }
-
-  .art-th { padding: 0 0 8px; }
-  .art-th-label { 
-    font-size: 11px; 
-    font-weight: 600; 
-    margin-bottom: 6px; 
-    white-space: nowrap; 
-    line-height: 1; 
-    opacity: 0.9;
-  }
-
-  /* Inputs dans le header */
-  .art-th-inp .ant-input-affix-wrapper,
-  .art-th-inp .ant-input {
-    background: rgba(255,255,255,0.15) !important;
-    border: 1px solid rgba(255,255,255,0.3) !important;
-    border-radius: 4px !important;
-    color: #fff !important;
-    font-size: 11px !important;
-    height: 26px !important;
-    min-height: 26px !important;
-    box-shadow: none !important;
-    width: 100% !important;
-    transition: background 0.2s;
-  }
-  .art-th-inp .ant-input-affix-wrapper:hover,
-  .art-th-inp .ant-input:hover,
-  .art-th-inp .ant-input-affix-wrapper:focus,
-  .art-th-inp .ant-input:focus,
-  .art-th-inp .ant-input-focused {
-    background: rgba(255,255,255,0.25) !important;
-    border-color: #fff !important;
-  }
-  
-  .art-th-inp .ant-input-affix-wrapper .ant-input {
-    background: transparent !important;
-    border: none !important;
-    height: 20px !important;
-    min-height: 20px !important;
-  }
-  .art-th-inp .ant-input-number {
-    background: rgba(255,255,255,0.15) !important;
-    border: 1px solid rgba(255,255,255,0.3) !important;
-    border-radius: 4px !important;
-    width: 100% !important;
-    height: 26px !important;
-    box-shadow: none !important;
-  }
-  .art-th-inp .ant-input-number-input {
-    color: #fff !important;
-    font-size: 11px !important;
-    height: 24px !important;
-    padding: 0 6px !important;
-  }
-  .art-th-inp .ant-input::placeholder,
-  .art-th-inp .ant-input-number-input::placeholder { color: rgba(255,255,255,0.5) !important; }
-  .art-th-inp .anticon { color: rgba(255,255,255,0.7) !important; }
-  .art-th-inp .ant-input-clear-icon { color: rgba(255,255,255,0.7) !important; }
-
-  /* Lignes du tableau */
-  .art-table .ant-table-tbody > tr > td {
-    padding: 8px 10px !important;
-    font-size: 13px !important;
-    border-bottom: 1px solid #f7fafc !important;
-    color: #4a5568;
-  }
-  .art-table .ant-table-tbody > tr:nth-child(even) > td { background: #fcfcfc !important; }
-  .art-table .ant-table-tbody > tr:hover > td { background: #f0f9ff !important; }
-  
-  /* Ligne sélectionnée */
-  .art-row-sel > td {
-    background: #e6f7ff !important;
-    color: #1a4f78 !important;
-    font-weight: 500;
-    border-bottom: 1px solid #bae7ff !important;
-  }
-
-  /* Pagination */
-  .art-table .ant-pagination {
-    padding: 10px 18px !important;
-    margin: 0 !important;
-    border-top: 1px solid #f0f2f5 !important;
-    background: #fff !important;
-  }
-  .art-table .ant-pagination-item-active {
-    border-color: #1a4f78;
-  }
-  .art-table .ant-pagination-item-active a {
+  .art-ref {
     color: #1a4f78;
-  }
-
-  .art-ref { 
-    color: #1a4f78; 
-    font-weight: 600; 
-    cursor: pointer; 
+    font-weight: 600;
+    cursor: pointer;
     text-decoration: none;
     transition: color 0.2s;
   }
   .art-ref:hover { color: #2c5282; text-decoration: underline; }
 `;
-
-// ================================================================
-// COMPOSANT TH (En-tête avec filtre)
-// ================================================================
-function Th({
-	label,
-	field,
-	type = "text",
-	value,
-	onChange,
-}: {
-	label: string;
-	field: string;
-	type?: "text" | "number";
-	value: string;
-	onChange: (f: string, v: string) => void;
-}) {
-	return (
-		<div className="art-th">
-			<div className="art-th-label">{label}</div>
-			<div className="art-th-inp">
-				{type === "number" ? (
-					<InputNumber
-						size="small"
-						value={value ? Number(value) : undefined}
-						onChange={(v) => onChange(field, v != null ? String(v) : "")}
-						placeholder="..."
-						controls={false}
-					/>
-				) : (
-					<Input
-						size="small"
-						value={value}
-						onChange={(e) => onChange(field, e.target.value)}
-						placeholder="Filtrer..."
-						prefix={<SearchOutlined />}
-						allowClear
-					/>
-				)}
-			</div>
-		</div>
-	);
-}
 
 // ================================================================
 // TYPES
@@ -384,17 +206,17 @@ export default function ArticleList({ onEdit, onNew }: Props) {
 	const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 	const [colFilters, setColFilters] = useState<Record<string, string>>({});
 	const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const selectedRow = useRef<IArticle | null>(null);
-	const [, forceRender] = useState(0);
 
 	// ---- Catalogue state ----
 	const [catLevels, setCatLevels] = useState<CatLevel[]>([]);
-	const [catLoading, setCatLoading] = useState(false);
+	const [, setCatLoading] = useState(false);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fetchArticles/fetchDepots called on mount
 	useEffect(() => {
 		fetchDepots();
 		fetchArticles();
 	}, []); // eslint-disable-line
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fetchArticles/fetchDepots called on mount
 	useEffect(() => {
 		fetchArticles();
 	}, [filter]); // eslint-disable-line
@@ -478,150 +300,128 @@ export default function ArticleList({ onEdit, onNew }: Props) {
 		}, 400);
 	};
 
-	const depotCols = useMemo<ColumnsType<IArticle>>(
+	const depotCols = useMemo<GridColDef<IArticle>[]>(
 		() =>
 			depots.map((d) => ({
-				key: `DE_${d.dE_No}`,
-				dataIndex: `DE_${d.dE_No}`,
+				field: `DE_${d.dE_No}`,
+				headerName: d.dE_Intitule,
 				width: 130,
-				align: "right" as const,
-				title: (
-					<Th
-						label={d.dE_Intitule}
-						field={`DE_${d.dE_No}`}
-						type="number"
-						value={colFilters[`DE_${d.dE_No}`] ?? ""}
-						onChange={handleColFilter}
-					/>
-				),
-				render: (_: unknown, row: IArticle) => {
-					const v = (row as Record<string, unknown>)[`DE_${d.dE_No}`];
+				align: "right",
+				renderCell: (params) => {
+					const v = (params.row as Record<string, unknown>)[`DE_${d.dE_No}`];
 					const n = typeof v === "number" ? v : 0;
-					return <span style={{ color: n > 0 ? "#2b6cb0" : "#a0aec0", fontWeight: n > 0 ? 600 : 400 }}>{n}</span>;
+					return (
+						<span style={{ color: n > 0 ? "#2b6cb0" : "#a0aec0", fontWeight: n > 0 ? 600 : 400 }}>
+							{n}
+						</span>
+					);
 				},
 			})),
-		[depots, colFilters],
+		[depots],
 	);
 
-	const cols = useMemo<ColumnsType<IArticle>>(
+	const columns = useMemo<GridColDef<IArticle>[]>(
 		() => [
 			{
-				key: "aR_Ref",
-				dataIndex: "aR_Ref",
+				field: "aR_Ref",
+				headerName: "Référence",
 				width: 130,
-				sorter: true,
-				title: <Th label="Référence" field="aR_Ref" value={colFilters["aR_Ref"] ?? ""} onChange={handleColFilter} />,
-				render: (v: string, row: IArticle) => (
-					<span className="art-ref" onClick={() => onEdit(row.cbMarq)}>
-						{v}
-					</span>
+				renderCell: (params) => (
+					<button
+						type="button"
+						className="art-ref"
+						onClick={() => onEdit(params.row.cbMarq)}
+						style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+					>
+						{params.value as string}
+					</button>
 				),
 			},
+			{ field: "aR_Design", headerName: "Désignation", width: 220 },
+			{ field: "fA_Intitule", headerName: "Famille", width: 160 },
 			{
-				key: "aR_Design",
-				dataIndex: "aR_Design",
-				width: 220,
-				title: (
-					<Th label="Désignation" field="aR_Design" value={colFilters["aR_Design"] ?? ""} onChange={handleColFilter} />
-				),
-			},
-			{
-				key: "fA_Intitule",
-				dataIndex: "fA_Intitule",
-				width: 160,
-				title: (
-					<Th label="Famille" field="fA_Intitule" value={colFilters["fA_Intitule"] ?? ""} onChange={handleColFilter} />
-				),
-			},
-			{
-				key: "aR_PrixAch",
-				dataIndex: "aR_PrixAch",
+				field: "aR_PrixAch",
+				headerName: "Prix Achat",
 				width: 110,
-				align: "right" as const,
-				sorter: true,
-				title: (
-					<Th
-						label="Prix Achat"
-						field="aR_PrixAch"
-						type="number"
-						value={colFilters["aR_PrixAch"] ?? ""}
-						onChange={handleColFilter}
-					/>
-				),
-				render: (v: number) => (v ? <span style={{ fontWeight: 500, color: "#2d3748" }}>{v.toFixed(3)}</span> : ""),
+				align: "right",
+				renderCell: (params) =>
+					params.value ? (
+						<span style={{ fontWeight: 500, color: "#2d3748" }}>{(params.value as number).toFixed(3)}</span>
+					) : (
+						""
+					),
 			},
 			...depotCols,
 			{
-				key: "totalStock",
-				dataIndex: "totalStock",
+				field: "totalStock",
+				headerName: "Total Stock",
 				width: 110,
-				align: "right" as const,
-				sorter: true,
-				title: (
-					<div className="art-th">
-						<div className="art-th-label">Total Stock</div>
-					</div>
-				),
-				render: (v: number) => (
-					<Tag
-						color={v > 0 ? "#3182ce" : "#cbd5e0"}
-						style={{
-							minWidth: 40,
-							textAlign: "center",
-							fontSize: 11,
-							fontWeight: 600,
-							borderRadius: 4,
-							border: "none",
-						}}
-					>
-						{v ?? 0}
-					</Tag>
-				),
+				align: "right",
+				renderCell: (params) => {
+					const v = (params.value as number) ?? 0;
+					return (
+						<Chip
+							label={v}
+							size="small"
+							sx={{
+								minWidth: 40,
+								fontSize: 11,
+								fontWeight: 600,
+								borderRadius: 1,
+								bgcolor: v > 0 ? "#3182ce" : "#cbd5e0",
+								color: "#fff",
+							}}
+						/>
+					);
+				},
 			},
 			{
-				key: "aR_Photo",
-				dataIndex: "aR_Photo",
+				field: "aR_Photo",
+				headerName: "Photo",
 				width: 60,
-				align: "center" as const,
-				title: (
-					<div className="art-th">
-						<div className="art-th-label">Photo</div>
-					</div>
-				),
-				render: (v: string) =>
-					v ? (
-						<img
-							src={v}
-							alt=""
+				align: "center",
+				sortable: false,
+				filterable: false,
+				renderCell: (params) =>
+					params.value ? (
+						<button
+							type="button"
 							style={{
 								width: 32,
 								height: 32,
-								objectFit: "cover",
-								borderRadius: 6,
+								padding: 0,
+								border: "none",
+								background: "none",
 								cursor: "pointer",
-								boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
 							}}
 							onClick={(e) => {
 								e.stopPropagation();
-								setLightboxSrc(v);
+								setLightboxSrc(params.value as string);
 							}}
-						/>
+						>
+							<img
+								src={params.value as string}
+								alt=""
+								style={{
+									width: 32,
+									height: 32,
+									objectFit: "cover",
+									borderRadius: 6,
+									boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+								}}
+							/>
+						</button>
 					) : null,
 			},
 		],
-		[depotCols, colFilters, onEdit],
+		[depotCols, onEdit],
 	);
 
 	const handleDelete = () => {
 		if (!selectedId) return;
-		Modal.confirm({
-			title: "Confirmer la suppression",
-			content: "Voulez-vous vraiment supprimer cet article ?",
-			okText: "Supprimer",
-			okType: "danger",
-			cancelText: "Annuler",
-			onOk: () => deleteArticle(selectedId),
-		});
+		if (window.confirm("Voulez-vous vraiment supprimer cet article ?")) {
+			deleteArticle(selectedId);
+		}
 	};
 
 	return (
@@ -636,14 +436,16 @@ export default function ArticleList({ onEdit, onNew }: Props) {
 							<div className="art-sidebar-header">Catalogue</div>
 							<div className="art-sidebar-scroll">
 								{catLevels[0].items.map((cat) => (
-									<div
+									<button
 										key={cat.value}
+										type="button"
 										className={`art-sidebar-item ${catLevels[0].selectedId === cat.value ? "active" : ""}`}
 										onClick={() => handleCatLevelChange(0, cat.value)}
+										style={{ width: "calc(100% - 16px)", textAlign: "left" }}
 									>
 										<span>{cat.text}</span>
 										{cat.isParent && <span className="art-sidebar-arrow">›</span>}
-									</div>
+									</button>
 								))}
 							</div>
 						</div>
@@ -659,34 +461,22 @@ export default function ArticleList({ onEdit, onNew }: Props) {
 									return (
 										<span key={realIndex} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
 											<span className="art-cat-sep">/</span>
-											<Select
-												size="small"
-												value={level.selectedId}
-												onChange={(v) => handleCatLevelChange(realIndex, v)}
-												options={level.items.map((c) => ({
-													value: c.value,
-													label: (
-														<span
-															style={{
-																display: "inline-flex",
-																alignItems: "center",
-																justifyContent: "space-between",
-																gap: 12,
-																width: "100%",
-															}}
-														>
-															<span>{c.text}</span>
-															{c.isParent && <span style={{ fontSize: 12, color: "#a0aec0", fontWeight: 300 }}>›</span>}
-														</span>
-													),
-												}))}
-												style={{ width: 180 }}
-												loading={catLoading && realIndex === catLevels.length - 1}
-												popupMatchSelectWidth={false}
-												showSearch
-												optionFilterProp="label"
-												allowClear={false}
-											/>
+											<FormControl size="small" sx={{ width: 180 }}>
+												<Select
+													value={level.selectedId}
+													onChange={(e) => handleCatLevelChange(realIndex, e.target.value as number)}
+													displayEmpty
+												>
+													{level.items.map((c) => (
+														<MenuItem key={c.value} value={c.value}>
+															<span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%" }}>
+																<span>{c.text}</span>
+																{c.isParent && <span style={{ fontSize: 12, color: "#a0aec0", fontWeight: 300 }}>›</span>}
+															</span>
+														</MenuItem>
+													))}
+												</Select>
+											</FormControl>
 										</span>
 									);
 								})}
@@ -695,106 +485,130 @@ export default function ArticleList({ onEdit, onNew }: Props) {
 
 						{/* ---- TOOLBAR ---- */}
 						<div className="art-toolbar">
-							<div className="art-toolbar-left">
-								<span className="art-toolbar-title">Liste des Articles</span>
-								<div className="art-page-size-wrap">
-									<span>Afficher :</span>
+							<Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+								<Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1a202c" }}>
+									Liste des Articles
+								</Typography>
+								<FormControl size="small" sx={{ width: 70 }}>
 									<Select
-										size="small"
 										value={filter.pageSize}
-										onChange={(v) => setFilter({ pageSize: v, pageIndex: 1 })}
-										options={[10, 20, 50, 100].map((n) => ({ value: n, label: String(n) }))}
-										style={{ width: 70, minWidth: 70 }}
-										bordered={false}
-									/>
-								</div>
-							</div>
-							<Space size="small">
-								<Button
+										onChange={(e) => setFilter({ pageSize: e.target.value as number, pageIndex: 1 })}
+										displayEmpty
+									>
+										{[10, 20, 50, 100].map((n) => (
+											<MenuItem key={n} value={n}>{n}</MenuItem>
+										))}
+									</Select>
+								</FormControl>
+								<TextField
+									placeholder="Référence"
 									size="small"
-									type="primary"
-									icon={<PlusOutlined />}
+									sx={{ width: 120 }}
+									value={colFilters["aR_Ref"] ?? ""}
+									onChange={(e) => handleColFilter("aR_Ref", e.target.value)}
+								/>
+								<TextField
+									placeholder="Désignation"
+									size="small"
+									sx={{ width: 160 }}
+									value={colFilters["aR_Design"] ?? ""}
+									onChange={(e) => handleColFilter("aR_Design", e.target.value)}
+								/>
+								<TextField
+									placeholder="Famille"
+									size="small"
+									sx={{ width: 140 }}
+									value={colFilters["fA_Intitule"] ?? ""}
+									onChange={(e) => handleColFilter("fA_Intitule", e.target.value)}
+								/>
+							</Stack>
+							<Stack direction="row" spacing={1}>
+								<Button
+									variant="contained"
+									size="small"
+									startIcon={<AddIcon />}
 									onClick={onNew}
-									style={{
-										background: "#1a4f78",
-										borderColor: "#1a4f78",
-										fontWeight: 600,
-										borderRadius: 6,
-										boxShadow: "0 2px 4px rgba(26,79,120,0.3)",
-									}}
+									sx={{ bgcolor: "#1a4f78", "&:hover": { bgcolor: "#163d5e" } }}
 								>
 									Nouveau
 								</Button>
 								<Button
+									variant="outlined"
 									size="small"
-									icon={<EditOutlined />}
+									startIcon={<EditIcon />}
 									onClick={() => onEdit(selectedId)}
 									disabled={!selectedId}
-									style={{
-										borderRadius: 6,
-										color: selectedId ? "#1a4f78" : "#cbd5e0",
-										borderColor: selectedId ? "#1a4f78" : "#e2e8f0",
-									}}
 								>
 									Modifier
 								</Button>
 								<Button
+									variant="outlined"
 									size="small"
-									danger
-									icon={<DeleteOutlined />}
+									color="error"
+									startIcon={<DeleteIcon />}
 									onClick={handleDelete}
 									disabled={!selectedId}
-									style={{ borderRadius: 6 }}
 								>
 									Supprimer
 								</Button>
-							</Space>
+							</Stack>
 						</div>
 
-						{/* ---- TABLEAU ---- */}
-						<Table<IArticle>
-							className="art-table"
-							dataSource={articles}
-							columns={cols}
-							loading={loading}
-							rowKey={(r) => r.cbMarq}
-							size="small"
-							scroll={{ x: "max-content", y: "calc(100vh - 230px)" }}
-							rowClassName={(r) => (selectedRow.current?.cbMarq === r.cbMarq ? "art-row-sel" : "")}
-							onRow={(r) => ({
-								onClick: () => {
-									selectedRow.current = r;
-									setSelectedId(r.cbMarq);
-									forceRender((n) => n + 1);
-								},
-								onDoubleClick: () => onEdit(r.cbMarq),
-								style: { cursor: "pointer" },
-							})}
-							pagination={{
-								current: filter.pageIndex,
-								pageSize: filter.pageSize,
-								total: totalCount,
-								showSizeChanger: false,
-								size: "small",
-								showTotal: (total, range) => `${range[0]}-${range[1]} sur ${total}`,
-								onChange: (page) => setFilter({ pageIndex: page }),
-							}}
-						/>
+						{/* ---- DATA GRID ---- */}
+						<Box sx={{ flex: 1, minHeight: 0 }}>
+							<DataGrid
+								rows={articles}
+								columns={columns}
+								loading={loading}
+								rowCount={totalCount}
+								paginationMode="server"
+								getRowId={(row) => row.cbMarq}
+								onRowClick={({ row }) => setSelectedId(row.cbMarq)}
+								onRowDoubleClick={({ row }) => onEdit(row.cbMarq)}
+								density="compact"
+								sx={{
+									"& .MuiDataGrid-row.Mui-selected": {
+										bgcolor: "action.selected",
+									},
+								}}
+								slots={{
+									noRowsOverlay: () => (
+										<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+											<Typography color="text.secondary">Aucune donnée</Typography>
+										</Box>
+									),
+								}}
+							/>
+						</Box>
 					</div>
 				</div>
 			</div>
 
 			{/* Lightbox image */}
-			<Image
-				style={{ display: "none" }}
-				preview={{
-					visible: !!lightboxSrc,
-					src: lightboxSrc ?? "",
-					onVisibleChange: (v) => {
-						if (!v) setLightboxSrc(null);
-					},
-				}}
-			/>
+			{lightboxSrc && (
+				<Box
+					sx={{
+						position: "fixed",
+						top: 0,
+						left: 0,
+						width: "100vw",
+						height: "100vh",
+						bgcolor: "rgba(0,0,0,0.8)",
+						zIndex: 9999,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						cursor: "pointer",
+					}}
+					onClick={() => setLightboxSrc(null)}
+				>
+					<img
+						src={lightboxSrc}
+						alt=""
+						style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain" }}
+					/>
+				</Box>
+			)}
 		</>
 	);
 }

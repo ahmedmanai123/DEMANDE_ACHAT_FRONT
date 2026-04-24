@@ -34,6 +34,10 @@ export const frontendNavData: NavProps["data"] = [
 						title: "Gestion des demandes",
 						path: "/besoins?mode=gestion-demandes",
 					},
+					{
+						title: "Types besoin",
+						path: "/besoin-types",
+					},
 				],
 			},
 			{
@@ -78,6 +82,21 @@ export const frontendNavData: NavProps["data"] = [
 							{
 								title: "sys.nav.user.account",
 								path: "/management/user/account",
+							},
+						],
+					},
+					{
+						title: "Gestion des comptes",
+						path: "/account",
+						icon: <Icon icon="solar:shield-user-bold-duotone" size="24" />,
+						children: [
+							{
+								title: "Liste des utilisateurs",
+								path: "/account/users",
+							},
+							{
+								title: "Nouveau utilisateur",
+								path: "/account/users/new",
 							},
 						],
 					},

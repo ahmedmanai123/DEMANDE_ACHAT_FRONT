@@ -1,19 +1,32 @@
-import { EyeOutlined, FileExcelOutlined, InfoCircleOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Button, ConfigProvider, DatePicker, Input, Modal, Select, Space, Typography } from "antd";
+import {
+	Add as AddIcon,
+	FileDownload as FileDownloadIcon,
+	InfoOutlined as InfoIcon,
+	Refresh as RefreshIcon,
+	VisibilityOutlined as VisibilityIcon,
+} from "@mui/icons-material";
+import {
+	Box,
+	Button,
+	FormControl,
+	InputLabel,
+	MenuItem,
+	Select,
+	Stack,
+	TextField,
+	Typography,
+} from "@mui/material";
+import type { GridColDef, GridRowParams } from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import ProDataGrid, { type AntColDef } from "@/pages/article/ProDataGrid";
 import * as besoinService from "@/services/besoinservice";
 import { useBesoinStore } from "@/store/useBesoinStore";
 import { Etat_Besoin, type IBesoin } from "@/types/besoin";
 import { ETAT_BESOIN_LABELS, getEtatBesoinProgressBar } from "@/utils/besoin.utils";
-import frFR from "antd/locale/fr_FR";
-
-const { Option } = Select;
-const { RangePicker } = DatePicker;
 
 dayjs.locale("fr");
 
@@ -67,28 +80,14 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 		setRangeValue([start, end]);
 	}, [filter.dateDebut, filter.dateFin]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: filter properties trigger refetch
 	useEffect(() => {
 		void fetchBesoins();
-	}, [
-		fetchBesoins,
-		filter.pageIndex,
-		filter.pageSize,
-		filter.b_Numero,
-		filter.b_Titre,
-		filter.b_Demandeur,
-		filter.b_Etat_Besoin,
-		filter.B_Etat_Besoin,
-		filter.dateDebut,
-		filter.dateFin,
-	]);
+	}, [fetchBesoins, filter.pageIndex, filter.pageSize, filter.b_Numero, filter.b_Titre, filter.b_Demandeur, filter.b_Etat_Besoin, filter.B_Etat_Besoin, filter.dateDebut, filter.dateFin]);
 
 	const showRecapPlaceholder = useCallback((row: IBesoin) => {
 		const num = String(asRecord(row).b_Numero ?? asRecord(row).B_Numero ?? "");
-		Modal.info({
-			title: `Récap de validation — ${num || "—"}`,
-			content:
-				"Équivalent de la popup ValidateurBesoin côté MVC : branchez l’API / circuit de validation pour afficher le détail ici.",
-		});
+		toast.info(`Récap de validation — ${num || "—"}\nÉquivalent de la popup ValidateurBesoin côté MVC : branchez l'API / circuit de validation pour afficher le détail ici.`);
 	}, []);
 
 	const handleExportExcel = async () => {
@@ -107,7 +106,7 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 			toast.success("Fichier téléchargé.");
 		} catch (error) {
 			console.error("Erreur export Excel", error);
-			toast.error("Échec de l’export Excel.");
+			toast.error("Échec de l'export Excel.");
 		}
 	};
 
@@ -131,21 +130,21 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 		}
 	};
 
-	const columns = useMemo((): AntColDef<IBesoin>[] => {
-		const base: AntColDef<IBesoin>[] = [
+	const columns = useMemo((): GridColDef<IBesoin>[] => {
+		const base: GridColDef<IBesoin>[] = [
 			{
 				field: "b_Numero",
 				headerName: "Numéro",
 				width: 100,
-				renderCell: ({ row }) => {
-					const num = String(asRecord(row).b_Numero ?? asRecord(row).B_Numero ?? "");
+				renderCell: (params) => {
+					const num = String(asRecord(params.row).b_Numero ?? asRecord(params.row).B_Numero ?? "");
 					return (
 						<button
 							type="button"
-							className="cursor-pointer border-0 bg-transparent p-0 font-semibold text-[#e2552d] underline"
+							style={{ cursor: "pointer", border: "none", background: "transparent", padding: 0, fontWeight: 600, color: "#e2552d", textDecoration: "underline" }}
 							onClick={(e) => {
 								e.stopPropagation();
-								onEdit(getBesoinId(row));
+								onEdit(getBesoinId(params.row));
 							}}
 						>
 							{num || "—"}
@@ -158,8 +157,8 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 				field: "b_Date",
 				headerName: "Date création",
 				width: 120,
-				renderCell: ({ row }) => {
-					const v = asRecord(row).b_Date ?? asRecord(row).B_Date;
+				renderCell: (params) => {
+					const v = asRecord(params.row).b_Date ?? asRecord(params.row).B_Date;
 					return v ? new Date(String(v)).toLocaleDateString("fr-FR") : "—";
 				},
 			},
@@ -170,60 +169,59 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 				field: "b_Etat_Besoin",
 				headerName: "État",
 				width: 160,
-				renderCell: ({ value }) => {
-					const etat = Number(value);
+				renderCell: (params) => {
+					const etat = Number(params.value);
 					const label = ETAT_BESOIN_LABELS[etat] ?? `État ${etat}`;
 					const { widthPct, barColor } = getEtatBesoinProgressBar(etat);
 					return (
-						<div className="min-w-[100px]">
-							<div className="text-xs font-semibold">{label}</div>
-							<div className="mt-0.5 h-1 overflow-hidden rounded-sm bg-[#e1e1e1]">
-								<div
-									className="h-full transition-[width] duration-500"
-									style={{ width: `${widthPct}%`, backgroundColor: barColor }}
-								/>
-							</div>
-						</div>
+						<Box sx={{ minWidth: 100 }}>
+							<Typography variant="caption" sx={{ fontWeight: 600 }}>{label}</Typography>
+							<Box sx={{ mt: 0.5, height: 4, overflow: "hidden", borderRadius: 0.5, bgcolor: "#e1e1e1" }}>
+								<Box sx={{ height: "100%", transition: "width 0.5s", width: `${widthPct}%`, bgcolor: barColor }} />
+							</Box>
+						</Box>
 					);
 				},
 			},
 		];
 
-		const dynamiques: AntColDef<IBesoin>[] = champsLibreColumnKeys.map((key) => ({
-			key: `cl_${key}`,
+		const dynamiques: GridColDef<IBesoin>[] = champsLibreColumnKeys.map((key) => ({
+			field: `cl_${key}`,
 			headerName: key,
 			width: 120,
-			renderCell: ({ row }) => readChampLibreCell(row, key),
+			renderCell: (params) => readChampLibreCell(params.row, key),
 		}));
 
-		const actions: AntColDef<IBesoin>[] = [
+		const actions: GridColDef<IBesoin>[] = [
 			{
-				key: "actions",
+				field: "actions",
 				headerName: " ",
 				width: 88,
-				renderCell: ({ row }) => (
-					<Space size={4}>
+				sortable: false,
+				filterable: false,
+				renderCell: (params) => (
+					<Stack direction="row" spacing={0.5}>
 						<Button
-							type="text"
 							size="small"
-							icon={<EyeOutlined />}
 							title="Consulter"
 							onClick={(e) => {
 								e.stopPropagation();
-								onView(getBesoinId(row));
+								onView(getBesoinId(params.row));
 							}}
-						/>
+						>
+							<VisibilityIcon fontSize="small" />
+						</Button>
 						<Button
-							type="text"
 							size="small"
-							icon={<InfoCircleOutlined />}
 							title="Récap de validation"
 							onClick={(e) => {
 								e.stopPropagation();
-								showRecapPlaceholder(row);
+								showRecapPlaceholder(params.row);
 							}}
-						/>
-					</Space>
+						>
+							<InfoIcon fontSize="small" />
+						</Button>
+					</Stack>
 				),
 			},
 		];
@@ -241,112 +239,143 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 	};
 
 	return (
-		<ConfigProvider locale={frFR}>
-			<div className="mx-auto max-w-[1400px] space-y-4 px-4 py-4">
-				<div className="flex flex-col gap-1 border-b border-border pb-3">
-					<Typography.Title level={4} className="!mb-0">
-						Demandes de besoin
-					</Typography.Title>
-					<Typography.Text type="secondary" className="text-sm">
-						Filtrez par période, état et colonnes dynamiques (champs libres) comme sur la vue MVC.
-					</Typography.Text>
-				</div>
+		<Box sx={{ mx: "auto", maxWidth: 1400, px: 2, py: 2 }}>
+			<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, borderBottom: 1, borderColor: "divider", pb: 1.5, mb: 2 }}>
+				<Typography variant="h5" sx={{ mb: 0 }}>
+					Demandes de besoin
+				</Typography>
+				<Typography variant="body2" color="text.secondary">
+					Filtrez par période, état et colonnes dynamiques (champs libres) comme sur la vue MVC.
+				</Typography>
+			</Box>
 
-				<div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between">
-					<Space wrap size="middle" className="items-end">
-						<div className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-muted-foreground">Lignes</span>
-							<Select
-								value={filter.pageSize ?? 20}
-								style={{ width: 100 }}
-								onChange={(pageSize) => setFilter({ pageSize: Number(pageSize) })}
-								options={PAGE_SIZE_OPTIONS.map((n) => ({ label: String(n), value: n }))}
-							/>
-						</div>
-						<div className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-muted-foreground">Période</span>
-							<RangePicker
-								value={rangeValue}
-								onChange={onRangeChange}
-								format="DD/MM/YYYY"
-								allowClear={false}
-								className="min-w-[260px]"
-							/>
-						</div>
-						<Input
-							placeholder="Numéro"
-							allowClear
-							className="w-[120px]"
-							value={String(filter.b_Numero ?? filter.B_Numero ?? "")}
-							onChange={(e) => setFilter({ b_Numero: e.target.value })}
-						/>
-						<Input
-							placeholder="Titre"
-							allowClear
-							className="w-[160px]"
-							value={String(filter.b_Titre ?? filter.B_Titre ?? "")}
-							onChange={(e) => setFilter({ b_Titre: e.target.value })}
-						/>
-						<Input
-							placeholder="Demandeur"
-							allowClear
-							className="w-[140px]"
-							value={String(filter.b_Demandeur ?? filter.B_Demandeur ?? "")}
-							onChange={(e) => setFilter({ b_Demandeur: e.target.value })}
-						/>
+			<Stack spacing={2} sx={{ flexDirection: { xs: "column", lg: "row" }, alignItems: { lg: "flex-end" }, justifyContent: "space-between" }}>
+				<Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", alignItems: "flex-end" }}>
+					<FormControl size="small" sx={{ minWidth: 100 }}>
+						<InputLabel>Lignes</InputLabel>
 						<Select
-							className="min-w-[220px]"
-							value={Number(filter.b_Etat_Besoin ?? filter.B_Etat_Besoin ?? Etat_Besoin.Tous)}
-							onChange={(value) => setFilter({ b_Etat_Besoin: value })}
-							placeholder="État"
+							value={filter.pageSize ?? 20}
+							label="Lignes"
+							onChange={(e) => setFilter({ pageSize: Number(e.target.value) })}
 						>
-							{Object.entries(ETAT_BESOIN_LABELS).map(([key, label]) => (
-								<Option key={key} value={Number(key)}>
-									{label}
-								</Option>
+							{PAGE_SIZE_OPTIONS.map((n) => (
+								<MenuItem key={n} value={n}>{n}</MenuItem>
 							))}
 						</Select>
-						<Button icon={<ReloadOutlined />} onClick={() => void fetchBesoins()}>
-							Actualiser
-						</Button>
-					</Space>
-
-					<Space wrap>
-						<Button type="primary" icon={<PlusOutlined />} onClick={() => void handleNewClick()}>
-							Nouveau
-						</Button>
-						<Button
-							type="default"
-							disabled={!selectedId}
-							onClick={() => {
-								if (selectedId) onEdit(selectedId);
-								else toast.warning("Sélectionnez une ligne.");
-							}}
+					</FormControl>
+					<Stack spacing={0.5}>
+						<Typography variant="caption" sx={{ fontWeight: 500, color: "text.secondary" }}>Période</Typography>
+						<Stack direction="row" spacing={1}>
+							<TextField
+								type="date"
+								size="small"
+								value={rangeValue?.[0]?.format("YYYY-MM-DD") ?? ""}
+								onChange={(e) => {
+									const start = e.target.value ? dayjs(e.target.value) : null;
+									if (start && rangeValue?.[1]) onRangeChange([start, rangeValue[1]]);
+								}}
+							/>
+							<TextField
+								type="date"
+								size="small"
+								value={rangeValue?.[1]?.format("YYYY-MM-DD") ?? ""}
+								onChange={(e) => {
+									const end = e.target.value ? dayjs(e.target.value) : null;
+									if (end && rangeValue?.[0]) onRangeChange([rangeValue[0], end]);
+								}}
+							/>
+						</Stack>
+					</Stack>
+					<TextField
+						placeholder="Numéro"
+						size="small"
+						sx={{ width: 120 }}
+						value={String(filter.b_Numero ?? filter.B_Numero ?? "")}
+						onChange={(e) => setFilter({ b_Numero: e.target.value })}
+					/>
+					<TextField
+						placeholder="Titre"
+						size="small"
+						sx={{ width: 160 }}
+						value={String(filter.b_Titre ?? filter.B_Titre ?? "")}
+						onChange={(e) => setFilter({ b_Titre: e.target.value })}
+					/>
+					<TextField
+						placeholder="Demandeur"
+						size="small"
+						sx={{ width: 140 }}
+						value={String(filter.b_Demandeur ?? filter.B_Demandeur ?? "")}
+						onChange={(e) => setFilter({ b_Demandeur: e.target.value })}
+					/>
+					<FormControl size="small" sx={{ minWidth: 220 }}>
+						<InputLabel>État</InputLabel>
+						<Select
+							value={Number(filter.b_Etat_Besoin ?? filter.B_Etat_Besoin ?? Etat_Besoin.Tous)}
+							label="État"
+							onChange={(e) => setFilter({ b_Etat_Besoin: e.target.value as number })}
 						>
-							Détails
-						</Button>
-						<Button icon={<FileExcelOutlined />} onClick={() => void handleExportExcel()}>
-							Exporter
-						</Button>
-					</Space>
-				</div>
+							{Object.entries(ETAT_BESOIN_LABELS).map(([key, label]) => (
+								<MenuItem key={key} value={Number(key)}>{label}</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+					<Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => void fetchBesoins()} size="small">
+						Actualiser
+					</Button>
+				</Stack>
 
-				<ProDataGrid<IBesoin>
+				<Stack direction="row" spacing={1}>
+					<Button variant="contained" startIcon={<AddIcon />} onClick={() => void handleNewClick()} size="small">
+						Nouveau
+					</Button>
+					<Button
+						variant="outlined"
+						disabled={!selectedId}
+						onClick={() => {
+							if (selectedId) onEdit(selectedId);
+							else toast.warning("Sélectionnez une ligne.");
+						}}
+						size="small"
+					>
+						Détails
+					</Button>
+					<Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={() => void handleExportExcel()} size="small">
+						Exporter
+					</Button>
+				</Stack>
+			</Stack>
+
+			<Box sx={{ mt: 2, height: 500 }}>
+				<DataGrid
 					rows={besoins}
 					columns={columns}
-					rowCount={totalCount}
 					loading={loading}
-					paginationModel={{
-						page: (filter.pageIndex ?? 1) - 1,
-						pageSize: filter.pageSize ?? 20,
-					}}
-					onPaginationModelChange={({ page, pageSize }) => setFilter({ pageIndex: page + 1, pageSize })}
+					rowCount={totalCount}
+					paginationMode="server"
 					getRowId={(row) => getBesoinId(row)}
-					selectedRowKey={selectedId || null}
-					onRowClick={({ row }) => setSelectedId(getBesoinId(row))}
-					onRowDoubleClick={({ row }) => onEdit(getBesoinId(row))}
+					onPaginationModelChange={({ page, pageSize }) => setFilter({ pageIndex: page + 1, pageSize })}
+					onRowClick={(params: GridRowParams<IBesoin>) => {
+						setSelectedId(getBesoinId(params.row));
+					}}
+					onRowDoubleClick={(params: GridRowParams<IBesoin>) => {
+						onEdit(getBesoinId(params.row));
+					}}
+					sx={{
+						"& .MuiDataGrid-row.Mui-selected": {
+							bgcolor: "action.selected",
+						},
+					}}
+					disableRowSelectionOnClick={false}
+					density="compact"
+					slots={{
+						noRowsOverlay: () => (
+							<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+								<Typography color="text.secondary">Aucune donnée</Typography>
+							</Box>
+						),
+					}}
 				/>
-			</div>
-		</ConfigProvider>
+			</Box>
+		</Box>
 	);
 }

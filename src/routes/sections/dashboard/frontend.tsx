@@ -8,6 +8,7 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 		{ path: "analysis", element: Component("/pages/dashboard/analysis") },
 		{ path: "articles", element: Component("/pages/article") },
 		{ path: "besoins", element: Component("/pages/besoin") },
+		{ path: "besoin-types", element: Component("/pages/besoin/components/BesoinTypePage") },
 		{ path: "parametres", element: Component("/pages/parametres") },
 		{
 			path: "document",
@@ -59,6 +60,20 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 						{ path: "role", element: Component("/pages/management/system/role") },
 						{ path: "user", element: Component("/pages/management/system/user") },
 						{ path: "user/:id", element: Component("/pages/management/system/user/detail") },
+					],
+				},
+			],
+		},
+		{
+			path: "account",
+			children: [
+				{ index: true, element: <Navigate to="users" replace /> },
+				{
+					path: "users",
+					children: [
+						{ index: true, element: Component("/pages/sys/account/UsersPage") },
+						{ path: "new", element: Component("/pages/sys/account/UserForm") },
+						{ path: "edit/:id", element: Component("/pages/sys/account/UserForm") },
 					],
 				},
 			],

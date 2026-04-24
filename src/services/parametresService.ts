@@ -1,5 +1,5 @@
-import apiClient from "@/api/apiClient";
 import type { AxiosError, AxiosRequestConfig } from "axios";
+import apiClient from "@/api/apiClient";
 import type {
 	ActionResponse,
 	AffaireAutorise,
@@ -13,7 +13,9 @@ import type {
 	MotifRectification,
 	MotifRectificationPayload,
 	ParametreEntity,
+	SelectOption,
 	SelectOptionItem,
+	SoucheItem,
 } from "@/types/parametres";
 
 const BASES = ["/api/Parametres", "/api/parametres", "/Parametres"];
@@ -264,6 +266,22 @@ const mapSelect = (raw: unknown): SelectOptionItem<number> => {
 	return {
 		text: asString(pick(item, "text", "Text")),
 		value: asNumber(pick(item, "value", "Value")),
+	};
+};
+
+const mapSelectOption = (raw: unknown): SelectOption => {
+	const item = toRecord(raw);
+	return {
+		text: asString(pick(item, "text", "Text", "label", "Label", "name", "Name")),
+		value: asString(pick(item, "value", "Value", "id", "Id", "code", "Code")),
+	};
+};
+
+const mapSouche = (raw: unknown): SoucheItem => {
+	const item = toRecord(raw);
+	return {
+		s_Intitule: asString(pick(item, "s_Intitule", "S_Intitule", "intitule", "Intitule", "label", "Label", "text", "Text")),
+		cbMarq: asNumber(pick(item, "cbMarq", "CbMarq", "cbmarq", "id", "Id", "value", "Value")),
 	};
 };
 
@@ -529,6 +547,16 @@ export const parametresService = {
 		} as GridResponse<MotifRectification>;
 	},
 
+	async getNextMotifCode() {
+		const response = await runWithFallback<unknown>([
+			() => getWithFallback("/api/Parametres/motifs/next-code"),
+			() => getWithFallback("/api/parametres/motifs/next-code"),
+			() => getWithFallback("/Parametres/GetMaxRectification_Motif"),
+		]);
+		const data = toRecord(response);
+		return asString(pick(data, "code", "Code", "nextCode", "NextCode"));
+	},
+
 	async addOrUpdateRectificationMotif(payload: MotifRectificationPayload) {
 		const body = {
 			MR_No: payload.mR_No,
@@ -561,5 +589,65 @@ export const parametresService = {
 		]);
 		assertMaybeAction(response);
 		return response as ActionResponse;
+	},
+
+	// Comptabilisation dropdowns
+	async getJournaux() {
+		const response = await runWithFallback<unknown[]>([
+			() => getWithFallback("/api/Parametres/journaux"),
+			() => getWithFallback("/api/parametres/journaux"),
+			() => getWithFallback("/Parametres/GETF_JOURNAUX"),
+		]);
+		return Array.isArray(response) ? response.map(mapSelectOption) : [];
+	},
+
+	async getComptes() {
+		const response = await runWithFallback<unknown[]>([
+			() => getWithFallback("/api/Parametres/comptes"),
+			() => getWithFallback("/api/parametres/comptes"),
+			() => getWithFallback("/Parametres/GETF_COMPTEG"),
+		]);
+		return Array.isArray(response) ? response.map(mapSelectOption) : [];
+	},
+
+	async getUsersSage() {
+		const response = await runWithFallback<unknown[]>([
+			() => getWithFallback("/api/Parametres/users-sage"),
+			() => getWithFallback("/api/parametres/users-sage"),
+			() => getWithFallback("/Parametres/GetUsers_Sage"),
+		]);
+		if (!Array.isArray(response)) return [];
+		return response.map((u) => {
+			// Handle both string and object formats
+			if (typeof u === "string") return u;
+			const item = toRecord(u);
+			return asString(pick(item, "text", "Text", "value", "Value", "user", "User", "name", "Name"));
+		});
+	},
+
+	async getSouches() {
+		const response = await runWithFallback<unknown[]>([
+			() => getWithFallback("/api/Parametres/souches"),
+			() => getWithFallback("/api/parametres/souches"),
+			() => getWithFallback("/Parametres/GetSouches_Sage"),
+		]);
+		return Array.isArray(response) ? response.map(mapSouche) : [];
+	},
+
+	async getArticles() {
+		const response = await runWithFallback<unknown[]>([
+			() => getWithFallback("/api/Parametres/articles"),
+			() => getWithFallback("/api/parametres/articles"),
+			() => getWithFallback("/Parametres/LstArticle"),
+			() => getWithFallback("/Parametres/GetArticles"),
+		]);
+		console.log("API Articles Response:", response);
+		if (!Array.isArray(response)) {
+			console.warn("Articles response is not an array:", response);
+			return [];
+		}
+		const mapped = response.map(mapSelectOption);
+		console.log("Mapped Articles:", mapped);
+		return mapped;
 	},
 };

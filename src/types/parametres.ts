@@ -123,3 +123,13 @@ export interface MotifRectificationPayload {
 	mR_TypeMotif: number;
 	mR_TypeDemande: number;
 }
+
+export interface SelectOption {
+	text: string;
+	value: string;
+}
+
+export interface SoucheItem {
+	s_Intitule: string;
+	cbMarq: number;
+}
