@@ -262,7 +262,8 @@ export default function SettingButton() {
 							<Text variant="subTitle1">{t("sys.settings.presetThemes")}</Text>
 							<div className="flex flex-wrap gap-1">
 								{Object.entries(presetsColors).map(([preset, color]) => (
-									<div
+									// biome-ignore lint/a11y/noStaticElementInteractions: <explanation>
+<div
 										key={preset}
 										className={cn(
 											"relative flex h-13 w-5 cursor-pointer items-center justify-center rounded transition-all duration-300 ease-in-out p-1",
@@ -348,7 +349,8 @@ export default function SettingButton() {
 						className="w-full border-dashed text-text-primary hover:border-primary hover:text-primary"
 						onClick={toggleFullScreen}
 					>
-						<div
+						{/** biome-ignore lint/a11y/useAriaPropsSupportedByRole: <explanation> */}
+<div
 							className="flex items-center justify-center"
 							aria-label={isFullscreen ? t("sys.settings.exitFullscreen") : t("sys.settings.fullscreen")}
 						>

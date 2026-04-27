@@ -11,6 +11,7 @@ export default function ArticleForm({ cbMarq, onBack }: Props) {
 	const [form] = Form.useForm();
 	const [photo, setPhoto] = useState<File | null>(null);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		if (cbMarq === 0) {
 			form.resetFields();

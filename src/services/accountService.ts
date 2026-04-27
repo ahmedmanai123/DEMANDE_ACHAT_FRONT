@@ -129,22 +129,6 @@ async function postWithFallback<T>(pathOrUrl: string, data?: unknown, config?: A
 	throw lastError;
 }
 
-async function putWithFallback<T>(pathOrUrl: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-	let lastError: unknown;
-	for (const url of candidateUrls(pathOrUrl)) {
-		try {
-			const response = await apiClient.put<T>(url, data, appendXsrfHeader(config));
-			return response.data as T;
-		} catch (error) {
-			lastError = error;
-			if (shouldTryNext(error)) continue;
-			// Throw original error to preserve response data
-			throw error;
-		}
-	}
-	// Throw original error to preserve response data
-	throw lastError;
-}
 
 const runWithFallback = async <T>(requests: Array<() => Promise<T>>) => {
 	let lastError: unknown;

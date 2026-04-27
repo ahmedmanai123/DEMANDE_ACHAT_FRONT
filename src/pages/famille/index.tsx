@@ -1,8 +1,8 @@
-import TierForm from "@/pages/tiers/TierFormPage";
-import TierList from "@/pages/tiers/FournisseursPage";
 import { useState } from "react";
+import FamilleForm from "./FamilleFormPage";
+import FamillesPage from "./FamillesPage";
 
-export default function TierPage() {
+export default function FamillePage() {
 	const [view, setView] = useState<"list" | "form">("list");
 	const [editId, setEditId] = useState<number>(0);
 
@@ -16,9 +16,5 @@ export default function TierPage() {
 		setView("list");
 	};
 
-	return view === "list" ? (
-		<TierList onEdit={handleEdit} onNew={() => handleEdit(0)} />
-	) : (
-		<TierForm cbMarq={editId} onBack={handleBack} />
-	);
+	return view === "list" ? <FamillesPage onEdit={handleEdit} /> : <FamilleForm cbMarq={editId} onBack={handleBack} />;
 }

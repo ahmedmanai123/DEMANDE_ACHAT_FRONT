@@ -21,7 +21,8 @@ export const NavItemRenderer: React.FC<NavItemRendererProps> = ({ item, classNam
 	if (hasChild) {
 		// Vertical nav items with children are clickable containers
 		return (
-			<div className={className} onClick={onClick}>
+			// biome-ignore lint/a11y/noStaticElementInteractions: <explanation>
+<div className={className} onClick={onClick}>
 				{children}
 			</div>
 		);

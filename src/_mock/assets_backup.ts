@@ -42,6 +42,16 @@ export const DB_MENU: Menu[] = [
 		path: "/articles",
 		component: "/pages/article",
 	},
+		{
+		id: "familles",
+		parentId: "group_dashboard",
+		name: "sys.nav.articles",
+		code: "familles",
+		icon: "solar:box-bold-duotone",
+		type: MENU,
+		path: "/familles",
+		component: "/pages/famille",
+	},
 	{
 		id: "besoins",
 		parentId: "group_dashboard",

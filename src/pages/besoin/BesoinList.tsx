@@ -5,17 +5,7 @@ import {
 	Refresh as RefreshIcon,
 	VisibilityOutlined as VisibilityIcon,
 } from "@mui/icons-material";
-import {
-	Box,
-	Button,
-	FormControl,
-	InputLabel,
-	MenuItem,
-	Select,
-	Stack,
-	TextField,
-	Typography,
-} from "@mui/material";
+import { Box, Button, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from "@mui/material";
 import type { GridColDef, GridRowParams } from "@mui/x-data-grid";
 import { DataGrid } from "@mui/x-data-grid";
 import type { Dayjs } from "dayjs";
@@ -52,7 +42,7 @@ const readChampLibreCell = (row: IBesoin, key: string): string => {
 	const dotted = r[`ChampsLibres.${key}`];
 	if (dotted != null && dotted !== "") return String(dotted);
 	const direct = r[key];
-	return direct != null && direct !== "" ? String(direct) : "";
+	return direct != null && direct !== "" ? String(direct) : "—";
 };
 
 export default function BesoinList({ onEdit, onView, onNew }: Props) {
@@ -83,11 +73,24 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: filter properties trigger refetch
 	useEffect(() => {
 		void fetchBesoins();
-	}, [fetchBesoins, filter.pageIndex, filter.pageSize, filter.b_Numero, filter.b_Titre, filter.b_Demandeur, filter.b_Etat_Besoin, filter.B_Etat_Besoin, filter.dateDebut, filter.dateFin]);
+	}, [
+		fetchBesoins,
+		filter.pageIndex,
+		filter.pageSize,
+		filter.b_Numero,
+		filter.b_Titre,
+		filter.b_Demandeur,
+		filter.b_Etat_Besoin,
+		filter.B_Etat_Besoin,
+		filter.dateDebut,
+		filter.dateFin,
+	]);
 
 	const showRecapPlaceholder = useCallback((row: IBesoin) => {
 		const num = String(asRecord(row).b_Numero ?? asRecord(row).B_Numero ?? "");
-		toast.info(`Récap de validation — ${num || "—"}\nÉquivalent de la popup ValidateurBesoin côté MVC : branchez l'API / circuit de validation pour afficher le détail ici.`);
+		toast.info(
+			`Récap de validation — ${num || "—"}\nÉquivalent de la popup ValidateurBesoin côté MVC : branchez l'API / circuit de validation pour afficher le détail ici.`,
+		);
 	}, []);
 
 	const handleExportExcel = async () => {
@@ -141,7 +144,15 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 					return (
 						<button
 							type="button"
-							style={{ cursor: "pointer", border: "none", background: "transparent", padding: 0, fontWeight: 600, color: "#e2552d", textDecoration: "underline" }}
+							style={{
+								cursor: "pointer",
+								border: "none",
+								background: "transparent",
+								padding: 0,
+								fontWeight: 600,
+								color: "#e2552d",
+								textDecoration: "underline",
+							}}
 							onClick={(e) => {
 								e.stopPropagation();
 								onEdit(getBesoinId(params.row));
@@ -152,7 +163,15 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 					);
 				},
 			},
-			{ field: "b_Titre", headerName: "Titre", width: 160 },
+			{
+				field: "b_Titre",
+				headerName: "Titre",
+				width: 160,
+				renderCell: (params): React.ReactNode => {
+					const titre = asRecord(params.row).b_Titre ?? asRecord(params.row).B_Titre ?? "";
+					return titre && titre !== "" ? titre : "—";
+				},
+			},
 			{
 				field: "b_Date",
 				headerName: "Date création",
@@ -162,9 +181,33 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 					return v ? new Date(String(v)).toLocaleDateString("fr-FR") : "—";
 				},
 			},
-			{ field: "b_Demandeur", headerName: "Demandeur", width: 120 },
-			{ field: "cA_Intitule", headerName: "Affaire", width: 140 },
-			{ field: "dE_Intitule", headerName: "Dépôt", width: 120 },
+			{
+				field: "b_Demandeur",
+				headerName: "Demandeur",
+				width: 120,
+				renderCell: (params) => {
+					const demandeur = asRecord(params.row).b_Demandeur ?? asRecord(params.row).B_Demandeur ?? "";
+					return demandeur || "—";
+				},
+			},
+			{
+				field: "cA_Intitule",
+				headerName: "Affaire",
+				width: 140,
+				renderCell: (params) => {
+					const affaire = asRecord(params.row).cA_Intitule ?? asRecord(params.row).CA_Intitule ?? "";
+					return affaire || "—";
+				},
+			},
+			{
+				field: "dE_Intitule",
+				headerName: "Dépôt",
+				width: 120,
+				renderCell: (params) => {
+					const depot = asRecord(params.row).dE_Intitule ?? asRecord(params.row).DE_Intitule ?? "";
+					return depot || "—";
+				},
+			},
 			{
 				field: "b_Etat_Besoin",
 				headerName: "État",
@@ -175,7 +218,9 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 					const { widthPct, barColor } = getEtatBesoinProgressBar(etat);
 					return (
 						<Box sx={{ minWidth: 100 }}>
-							<Typography variant="caption" sx={{ fontWeight: 600 }}>{label}</Typography>
+							<Typography variant="caption" sx={{ fontWeight: 600 }}>
+								{label}
+							</Typography>
 							<Box sx={{ mt: 0.5, height: 4, overflow: "hidden", borderRadius: 0.5, bgcolor: "#e1e1e1" }}>
 								<Box sx={{ height: "100%", transition: "width 0.5s", width: `${widthPct}%`, bgcolor: barColor }} />
 							</Box>
@@ -189,7 +234,7 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 			field: `cl_${key}`,
 			headerName: key,
 			width: 120,
-			renderCell: (params) => readChampLibreCell(params.row, key),
+			renderCell: (params) => readChampLibreCell(params.row, key) || "—",
 		}));
 
 		const actions: GridColDef<IBesoin>[] = [
@@ -240,7 +285,17 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 
 	return (
 		<Box sx={{ mx: "auto", maxWidth: 1400, px: 2, py: 2 }}>
-			<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, borderBottom: 1, borderColor: "divider", pb: 1.5, mb: 2 }}>
+			<Box
+				sx={{
+					display: "flex",
+					flexDirection: "column",
+					gap: 0.5,
+					borderBottom: 1,
+					borderColor: "divider",
+					pb: 1.5,
+					mb: 2,
+				}}
+			>
 				<Typography variant="h5" sx={{ mb: 0 }}>
 					Demandes de besoin
 				</Typography>
@@ -249,7 +304,14 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 				</Typography>
 			</Box>
 
-			<Stack spacing={2} sx={{ flexDirection: { xs: "column", lg: "row" }, alignItems: { lg: "flex-end" }, justifyContent: "space-between" }}>
+			<Stack
+				spacing={2}
+				sx={{
+					flexDirection: { xs: "column", lg: "row" },
+					alignItems: { lg: "flex-end" },
+					justifyContent: "space-between",
+				}}
+			>
 				<Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", alignItems: "flex-end" }}>
 					<FormControl size="small" sx={{ minWidth: 100 }}>
 						<InputLabel>Lignes</InputLabel>
@@ -259,12 +321,16 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 							onChange={(e) => setFilter({ pageSize: Number(e.target.value) })}
 						>
 							{PAGE_SIZE_OPTIONS.map((n) => (
-								<MenuItem key={n} value={n}>{n}</MenuItem>
+								<MenuItem key={n} value={n}>
+									{n}
+								</MenuItem>
 							))}
 						</Select>
 					</FormControl>
 					<Stack spacing={0.5}>
-						<Typography variant="caption" sx={{ fontWeight: 500, color: "text.secondary" }}>Période</Typography>
+						<Typography variant="caption" sx={{ fontWeight: 500, color: "text.secondary" }}>
+							Période
+						</Typography>
 						<Stack direction="row" spacing={1}>
 							<TextField
 								type="date"
@@ -315,7 +381,9 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 							onChange={(e) => setFilter({ b_Etat_Besoin: e.target.value as number })}
 						>
 							{Object.entries(ETAT_BESOIN_LABELS).map(([key, label]) => (
-								<MenuItem key={key} value={Number(key)}>{label}</MenuItem>
+								<MenuItem key={key} value={Number(key)}>
+									{label}
+								</MenuItem>
 							))}
 						</Select>
 					</FormControl>
@@ -339,7 +407,12 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 					>
 						Détails
 					</Button>
-					<Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={() => void handleExportExcel()} size="small">
+					<Button
+						variant="outlined"
+						startIcon={<FileDownloadIcon />}
+						onClick={() => void handleExportExcel()}
+						size="small"
+					>
 						Exporter
 					</Button>
 				</Stack>

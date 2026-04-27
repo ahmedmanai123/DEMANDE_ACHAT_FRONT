@@ -1,19 +1,13 @@
-import avatar1 from "@/assets/images/avatars/avatar-1.png";
-import avatar2 from "@/assets/images/avatars/avatar-2.png";
-import avatar3 from "@/assets/images/avatars/avatar-3.png";
-import avatar4 from "@/assets/images/avatars/avatar-4.png";
-import avatar5 from "@/assets/images/avatars/avatar-5.png";
 import { Chart, useChart } from "@/components/chart";
 import Icon from "@/components/icon/icon";
 import { GLOBAL_CONFIG } from "@/global-config";
-import { Avatar, AvatarImage } from "@/ui/avatar";
+import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
 import { Progress } from "@/ui/progress";
 import { Text, Title } from "@/ui/typography";
 import { rgbAlpha } from "@/utils/theme";
 import { useState } from "react";
-import BannerCard from "./banner-card";
 
 const quickStats = [
 	{
@@ -69,12 +63,13 @@ const projectTasks = [
 ];
 
 const projectUsers = [
-	{ avatar: avatar1, name: "John" },
-	{ avatar: avatar2, name: "Wiliam" },
-	{ avatar: avatar3, name: "Kevin" },
-	{ avatar: avatar4, name: "Maciej" },
-	{ avatar: avatar5, name: "Kamil" },
+	{ name: "John", initial: "J" },
+	{ name: "Wiliam", initial: "W" },
+	{ name: "Kevin", initial: "K" },
+	{ name: "Maciej", initial: "M" },
+	{ name: "Kamil", initial: "K" },
 ];
+
 const transactions = [
 	{ icon: "mdi:spotify", name: "Spotify Music", id: "#T11032", amount: 10000, time: "06:30 pm", status: "up" },
 	{ icon: "mdi:medium", name: "Medium", id: "#T11032", amount: -26, time: "08:30 pm", status: "down" },
@@ -111,11 +106,25 @@ export default function Workbench() {
 		plotOptions: { pie: { donut: { size: "70%" } } },
 	});
 
-	// throw new Error("test error"); // 注释掉直接抛错，改用演示组件
-
 	return (
 		<div className="flex flex-col gap-4 w-full">
-			<BannerCard />
+			{/* Simple Banner Card */}
+			<Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+				<CardContent className="p-6">
+					<div className="flex items-center justify-between">
+						<div>
+							<Title as="h2" className="text-2xl font-bold mb-2">
+								Welcome to {GLOBAL_CONFIG.appName}
+							</Title>
+							<Text variant="body1" className="opacity-90">
+								Your dashboard is ready to use
+							</Text>
+						</div>
+						<div className="text-6xl">📊</div>
+					</div>
+				</CardContent>
+			</Card>
+
 			{/* 顶部四个统计卡片 */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				{quickStats.map((stat) => (
@@ -148,6 +157,7 @@ export default function Workbench() {
 								<Chart
 									type="bar"
 									height={40}
+									// biome-ignore lint/correctness/useHookAtTopLevel: <explanation>
 									options={useChart({
 										chart: { sparkline: { enabled: true } },
 										colors: [stat.color],
@@ -248,8 +258,8 @@ export default function Workbench() {
 					</Text>
 					<div className="flex -space-x-2 mb-2">
 						{projectUsers.map((user) => (
-							<Avatar key={user.name} className="inline-block w-8 h-8 rounded-full">
-								<AvatarImage src={user.avatar} />
+							<Avatar key={user.name} className="inline-block w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">
+								{user.initial}
 							</Avatar>
 						))}
 					</div>

@@ -27,7 +27,8 @@ export default function NoticeButton() {
 
 	return (
 		<>
-			<div className="relative" onClick={() => setDrawerOpen(true)}>
+			{/** biome-ignore lint/a11y/noStaticElementInteractions: <explanation> */}
+<div className="relative" onClick={() => setDrawerOpen(true)}>
 				<Button variant="ghost" size="icon" className="rounded-full" onClick={() => setDrawerOpen(true)}>
 					<Icon icon="solar:bell-bing-bold-duotone" size={24} />
 				</Button>

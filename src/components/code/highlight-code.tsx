@@ -18,7 +18,8 @@ export function HighlightCode({ code, options, className, withCopy = true }: Hig
 	const { themeMode } = useSettings();
 
 	return (
-		<div
+		// biome-ignore lint/a11y/noStaticElementInteractions: <explanation>
+<div
 			className={cn("w-full relative group", className)}
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}

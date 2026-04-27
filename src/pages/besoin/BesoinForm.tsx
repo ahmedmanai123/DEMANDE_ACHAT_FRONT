@@ -694,6 +694,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 		setArticlePickerOpen(true);
 	};
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		if (!articlePickerOpen) return;
 		void loadArticlePickerRows(articlePickerPage);

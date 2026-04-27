@@ -35,5 +35,39 @@ export const routes = [
 		path: "/account/users/edit/:id",
 		component: () => import("@/pages/sys/account/UserForm"),
 	},
+	{
+		order: 23,
+		path: "/emails",
+		component: () => import("@/pages/email/EmailPage"),
+	},
+	// Tiers management routes
+	{
+		order: 30,
+		path: "/tiers/fournisseurs",
+		component: () => import("@/pages/tiers/FournisseursPage"),
+	},
+	{
+		order: 30,
+		path: "/fournisseurs",
+		component: () => import("@/pages/tiers/FournisseursPage"),
+	},
+	{
+		order: 31,
+		path: "/tiers/addorupdate",
+		component: () => import("@/pages/tiers/TierFormPage"),
+	},
+	// Famille management routes
+	{
+		order: 40,
+		path: "/familles",
+		component: () => import("@/pages/famille/index"),
+	},
+
+	{
+		order: 41,
+		path: "/famille/addorupdate",
+		component: () => import("@/pages/famille/FamilleFormPage"),
+	},
+
 	//
 ];

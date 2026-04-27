@@ -60,6 +60,21 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/parametres",
 				icon: <Icon icon="solar:settings-bold-duotone" size="24" />,
 			},
+			{
+				title: "Gestion des emails",
+				path: "/emails",
+				icon: <Icon icon="solar:letter-bold-duotone" size="24" />,
+			},
+			{
+				title: "Fournisseurs",
+				path: "/fournisseurs",
+				icon: <Icon icon="solar:shop-2-bold-duotone" size="24" />,
+			},
+			{
+				title: "Familles",
+				path: "/familles",
+				icon: <Icon icon="solar:folder-with-files-bold-duotone" size="24" />,
+			},
 		],
 	},
 	{
@@ -82,6 +97,21 @@ export const frontendNavData: NavProps["data"] = [
 							{
 								title: "sys.nav.user.account",
 								path: "/management/user/account",
+							},
+						],
+					},
+					{
+						title: "sys.nav.roles",
+						path: "/roles",
+						icon: <Icon icon="local:ic-role" size="24" />,
+						children: [
+							{
+								title: "Liste des rôles",
+								path: "/roles",
+							},
+							{
+								title: "Nouveau rôle",
+								path: "/roles/new",
 							},
 						],
 					},

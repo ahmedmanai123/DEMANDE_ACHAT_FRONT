@@ -49,7 +49,32 @@ export default defineConfig(({ mode }) => {
 					changeOrigin: true,
 					secure: false,
 				},
+				"/api/Role": {
+					target: "https://localhost:7233",
+					changeOrigin: true,
+					secure: false,
+				},
+				"/Role": {
+					target: "https://localhost:7233",
+					changeOrigin: true,
+					secure: false,
+				},
+				"/api/tiers": {
+					target: "https://localhost:7233",
+					changeOrigin: true,
+					secure: false,
+				},
+				"/api/besoin": {
+					target: "https://localhost:7233",
+					changeOrigin: true,
+					secure: false,
+				},
 				"/api/besoin-type": {
+					target: "https://localhost:7233",
+					changeOrigin: true,
+					secure: false,
+				},
+				"/api/famille": {
 					target: "https://localhost:7233",
 					changeOrigin: true,
 					secure: false,

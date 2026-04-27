@@ -5,11 +5,14 @@ import { Component } from "./utils";
 export function getFrontendDashboardRoutes(): RouteObject[] {
 	const frontendDashboardRoutes: RouteObject[] = [
 		{ path: "workbench", element: Component("/pages/dashboard/workbench") },
+
 		{ path: "analysis", element: Component("/pages/dashboard/analysis") },
 		{ path: "articles", element: Component("/pages/article") },
+		{ path: "fournisseurs", element: Component("/pages/tiers") },
 		{ path: "besoins", element: Component("/pages/besoin") },
 		{ path: "besoin-types", element: Component("/pages/besoin/components/BesoinTypePage") },
 		{ path: "parametres", element: Component("/pages/parametres") },
+		{ path: "familles", element: Component("/pages/famille") },
 		{
 			path: "document",
 			children: [
@@ -63,6 +66,14 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 					],
 				},
 			],
+		},
+		{
+			path: "roles",
+			children: [{ index: true, element: Component("/pages/role/RolePage") }],
+		},
+		{
+			path: "emails",
+			element: Component("/pages/email/EmailPage"),
 		},
 		{
 			path: "account",
