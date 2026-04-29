@@ -1015,9 +1015,9 @@ export default function DocumentDetailPage() {
 									{taxes.map((tax, idx) => (
 										// biome-ignore lint/suspicious/noArrayIndexKey: taxes have no unique id
 										<TableRow key={`tax-${idx}`}>
-											<TableCell>{tax.lt_BaseTaxe.toFixed(2)}</TableCell>
+											<TableCell>{tax.lt_BaseTaxe ? tax.lt_BaseTaxe.toFixed(2) : ""}</TableCell>
 											<TableCell>{tax.lt_Taux}%</TableCell>
-											<TableCell>{tax.lt_MontantTaxe.toFixed(2)}</TableCell>
+											<TableCell>{tax.lt_MontantTaxe ? tax.lt_MontantTaxe.toFixed(2) : ""}</TableCell>
 										</TableRow>
 									))}
 								</TableBody>

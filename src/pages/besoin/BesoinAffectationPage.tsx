@@ -28,6 +28,7 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { tiersService } from "@/api/services/tiersService";
 import {
 	addAffectation,
 	addOrUpdateRetourBesoin,
@@ -57,6 +58,7 @@ import {
 	Type_Validation,
 	TypeSage,
 } from "@/types/besoin";
+import type { F_COMPTETDto } from "@/types/tiers";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,6 +97,27 @@ const toFixedIfNumber = (value: unknown): string => {
 				maximumFractionDigits: 3,
 			}).format(n)
 		: "";
+};
+
+const getTiersNum = (value: unknown): string => {
+	const tiers = asRecord(value);
+	return asString(tiers.CT_Num ?? tiers.cT_Num ?? tiers.ct_Num);
+};
+
+const getTiersLabel = (value: unknown): string => {
+	const tiers = asRecord(value);
+	const code = getTiersNum(tiers);
+	const intitule = asString(tiers.CT_Intitule ?? tiers.cT_Intitule ?? tiers.ct_Intitule);
+	if (!code) return intitule;
+	return intitule ? `${code} - ${intitule}` : code;
+};
+
+const getField = (source: Record<string, unknown>, ...keys: string[]): string => {
+	for (const key of keys) {
+		const value = source[key];
+		if (value !== undefined && value !== null && asString(value) !== "") return asString(value);
+	}
+	return "";
 };
 
 // TypeAffectation: Fournisseur=1, Document=2
@@ -139,6 +162,7 @@ export default function BesoinAffectationPage({
 	const [besoin, setBesoin] = useState<Record<string, unknown>>({});
 	const [articles, setArticles] = useState<DA_BESOIN_ARTICLEDto[]>([]);
 	const [affectations, setAffectations] = useState<AFFECTATION_DEMANDEDto[]>([]);
+	const [fournisseurs, setFournisseurs] = useState<F_COMPTETDto[]>([]);
 	const [docs, setDocs] = useState<Array<{ value: string; text: string }>>([]);
 	const [retourRowsByArticle, setRetourRowsByArticle] = useState<Record<number, Record<string, unknown>[]>>({});
 	const [selectedRetourRows, setSelectedRetourRows] = useState<Record<number, Record<string, unknown>>>({});
@@ -167,7 +191,14 @@ export default function BesoinAffectationPage({
 	const demande = asRecord(details.demande);
 	const etatAffectation = asNumber(demande.B_Etat_Affectation_Acheteur);
 	const adTypeDemande = asNumber(demande.AD_TypeDemande);
-	const bNumero = asString(demande.B_Numero || besoin.B_Numero);
+	const bNumero = getField(demande, "B_Numero", "b_Numero") || getField(besoin, "B_Numero", "b_Numero");
+	const detailFields = [
+		{ label: "Titre", value: getField(demande, "B_Titre", "b_Titre") || getField(besoin, "B_Titre", "b_Titre") },
+		{ label: "Date", value: getField(demande, "B_Date", "b_Date") || getField(besoin, "B_Date", "b_Date") },
+		{ label: "Demandeur", value: getField(demande, "D_Intitule", "d_Intitule", "Demandeur", "demandeur") },
+		{ label: "Depot", value: getField(demande, "DE_Intitule", "dE_Intitule", "Depot", "depot") },
+		{ label: "Type document", value: tpNo === TypeSage.BC_Achat ? "Bon de commande achat" : "Demande de prix" },
+	];
 
 	const existDemandeGenerer = asBool(details.exist_Demande_Generer);
 	const lieeDemandeGenerer = asBool(details.liee_Demande_Generer);
@@ -197,6 +228,17 @@ export default function BesoinAffectationPage({
 	const showCrudButtons = showFormButtons && !showValidationRetour;
 	const showBtnGenerer = !isRetourSansPartiel && showFormButtons && !isAcheter;
 	const showBtnValider = showFormButtons && !isAcheter;
+	const fournisseurOptions = useMemo(() => {
+		const options = fournisseurs
+			.map((fournisseur) => ({ value: getTiersNum(fournisseur), text: getTiersLabel(fournisseur) }))
+			.filter((fournisseur) => fournisseur.value);
+
+		if (form.eP_Tiers && !options.some((option) => option.value === form.eP_Tiers)) {
+			return [{ value: form.eP_Tiers, text: form.eP_Tiers }, ...options];
+		}
+
+		return options;
+	}, [form.eP_Tiers, fournisseurs]);
 
 	// ── loadDocsForAffectation ─────────────────────────────────────────────────
 
@@ -220,18 +262,28 @@ export default function BesoinAffectationPage({
 	const loadAll = useCallback(async (): Promise<void> => {
 		setLoading(true);
 		try {
-			const [d, b, a, aff] = await Promise.all([
+			const [d, b, a, aff, tiersResponse] = await Promise.all([
 				getDetailsDemandeAAcheter(besoinId),
 				getBesoinById(besoinId),
 				getBesoinArticles(besoinId),
 				getAffectationDetails({ B_No: besoinId, TP_No: tpNo }),
+				tiersService
+					.getTiers({ CT_Type: 1, CT_Sommeil: 0, pageIndex: 1, pageSize: 500 })
+					.catch(() => ({ data: [] as F_COMPTETDto[], total: 0, pageIndex: 1, pageSize: 500, totalPages: 0 })),
 			]);
 			const dR = asRecord(d);
 			const bR = asRecord(b);
+			const tiersRecord = asRecord(tiersResponse);
+			const tiersRows = Array.isArray(tiersRecord.data)
+				? tiersRecord.data
+				: Array.isArray(tiersRecord.items)
+					? tiersRecord.items
+					: [];
 			setDetails(dR);
 			setBesoin(bR);
 			setArticles(Array.isArray(a) ? a : []);
 			setAffectations(Array.isArray(asRecord(aff).data) ? (asRecord(aff).data as AFFECTATION_DEMANDEDto[]) : []);
+			setFournisseurs(tiersRows as F_COMPTETDto[]);
 
 			// Historique — read current filter without adding it to deps
 			setHistoriqueFilter((currentFilter) => {
@@ -332,7 +384,7 @@ export default function BesoinAffectationPage({
 		if (!baNo) return;
 		try {
 			const res = await getFournisseurPrincipal(baNo);
-			const ctNum = asString(asRecord(res).cT_Num);
+			const ctNum = getTiersNum(res);
 			if (ctNum) setForm((p) => ({ ...p, eP_Tiers: ctNum }));
 		} catch {
 			/* silencieux */
@@ -575,6 +627,28 @@ export default function BesoinAffectationPage({
 				</Stack>
 			</Stack>
 
+			<Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
+				<Typography variant="subtitle1" sx={{ color: "primary.main", fontWeight: 600, mb: 1.5 }}>
+					Details de la demande
+				</Typography>
+				<Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ flexWrap: "wrap" }}>
+					<Stack sx={{ minWidth: 180 }}>
+						<Typography variant="caption" color="text.secondary">
+							N demande
+						</Typography>
+						<Typography variant="body2">{bNumero || "-"}</Typography>
+					</Stack>
+					{detailFields.map((field) => (
+						<Stack key={field.label} sx={{ minWidth: 180 }}>
+							<Typography variant="caption" color="text.secondary">
+								{field.label}
+							</Typography>
+							<Typography variant="body2">{field.value || "-"}</Typography>
+						</Stack>
+					))}
+				</Stack>
+			</Paper>
+
 			{lieeDemandeGenerer && (
 				<Alert severity="info" sx={{ mb: 2 }}>
 					Des documents sont déjà générés pour cette demande. La table d'affectation reste consultable.
@@ -730,6 +804,11 @@ export default function BesoinAffectationPage({
 										onChange={(e) => setForm((p) => ({ ...p, eP_Tiers: String(e.target.value) }))}
 									>
 										<MenuItem value="">Choisir</MenuItem>
+										{fournisseurOptions.map((fournisseur) => (
+											<MenuItem key={fournisseur.value} value={fournisseur.value}>
+												{fournisseur.text}
+											</MenuItem>
+										))}
 									</Select>
 								</FormControl>
 							</Stack>
@@ -896,7 +975,7 @@ export default function BesoinAffectationPage({
 														aD_No: adNo,
 														bA_No: asNumber(r.BA_No ?? r.bA_No),
 														aD_TypeAffectation: asNumber(r.AD_TypeAffectation ?? r.aD_TypeAffectation) || 1,
-														eP_Tiers: asString(r.EP_Tiers ?? r.eP_Tiers),
+														eP_Tiers: asString(r.EP_Tiers ?? r.eP_Tiers ?? r.CT_Num ?? r.cT_Num ?? r.ct_Num),
 														aD_NoDocument_Affectation: asNumber(
 															r.AD_NoDocument_Affectation ?? r.aD_NoDocument_Affectation,
 														),

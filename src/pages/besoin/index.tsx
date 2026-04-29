@@ -1,14 +1,16 @@
 // src/pages/besoin/index.tsx
 import { useState } from "react";
-import BesoinList from "@/pages/besoin/BesoinList";
 import BesoinAffectationPage from "@/pages/besoin/BesoinAffectationPage";
 import BesoinForm from "@/pages/besoin/BesoinForm";
 import BesoinGestionDemandesPage from "@/pages/besoin/BesoinGestionDemandesPage";
+import BesoinList from "@/pages/besoin/BesoinList";
+import BesoinValidationPage from "@/pages/besoin/BesoinValidationPage";
 
 export default function BesoinPage() {
 	const params = new URLSearchParams(window.location.search);
 	const mode = params.get("mode");
 	const affectationId = Number(params.get("id") || 0);
+	const validationBesoinId = Number(params.get("b_No") || 0);
 	const affectationType = Number(params.get("type") || 1);
 	const [view, setView] = useState<"list" | "form">("list");
 	const [editId, setEditId] = useState<number>(0);
@@ -31,6 +33,19 @@ export default function BesoinPage() {
 	// Mode affectation (depuis gestion demandes)
 	if (mode === "affectation" && affectationId > 0) {
 		return <BesoinAffectationPage besoinId={affectationId} tpNo={affectationType} onBack={handleBack} />;
+	}
+
+	if (mode === "validation" && affectationId > 0 && validationBesoinId > 0) {
+		return (
+			<BesoinValidationPage
+				validationId={affectationId}
+				besoinId={validationBesoinId}
+				onBack={() => {
+					window.history.replaceState(null, "", "/besoins");
+					handleBack();
+				}}
+			/>
+		);
 	}
 
 	// Mode gestion des demandes
