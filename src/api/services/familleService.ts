@@ -1,12 +1,65 @@
 import apiClient from "@/api/apiClient";
 import type {
 	Catalogue,
-	F_FAMILLEDto,
 	FAMILLEDto,
 	FamilleApiResponse,
 	FamilleCentral,
 	FamilleFilter,
 } from "@/types/famille";
+
+const shouldTryNext = (error: unknown) => {
+	const axiosError = error as { response?: { status?: number } };
+	return axiosError.response?.status === 404 || axiosError.response?.status === 405;
+};
+
+const mapCatalogue = (raw: unknown): Catalogue => {
+	const item = (raw ?? {}) as Record<string, unknown>;
+	return {
+		Value: Number(item.Value ?? item.value ?? item.CL_No ?? item.cL_No ?? 0),
+		Text: String(item.Text ?? item.text ?? ""),
+		IsParent: Boolean(item.IsParent ?? item.isParent ?? false),
+	};
+};
+
+const getCataloguesWithFallback = async (cl_NoParent: number, cL_Niveau: number): Promise<Catalogue[]> => {
+	const requests = [
+		() =>
+			apiClient.get<Catalogue[]>("/api/famille/catalogues", {
+				params: { cl_NoParent, cL_Niveau },
+			}),
+		() =>
+			apiClient.get<Catalogue[]>("/api/famille/select/catalogues", {
+				params: { cl_NoParent, cL_Niveau },
+			}),
+		() =>
+			apiClient.get<Catalogue[]>("/api/Parametres/catalogues", {
+				params: { cl_NoParent },
+			}),
+		() =>
+			apiClient.get<Catalogue[]>("/api/parametres/catalogues", {
+				params: { cl_NoParent },
+			}),
+		() =>
+			apiClient.get<Catalogue[]>("/Parametres/GetCataloguesForSelect", {
+				params: { cl_NoParent },
+			}),
+	];
+
+	let lastError: unknown;
+
+	for (const request of requests) {
+		try {
+			const response = await request();
+			return Array.isArray(response.data) ? response.data.map(mapCatalogue) : [];
+		} catch (error) {
+			lastError = error;
+			if (shouldTryNext(error)) continue;
+			throw error;
+		}
+	}
+
+	throw lastError;
+};
 
 const familleService = {
 	// GET api/famille
@@ -42,10 +95,7 @@ const familleService = {
 
 	// GET api/famille/catalogues
 	getCatalogues: async (cl_NoParent: number, cL_Niveau: number): Promise<Catalogue[]> => {
-		const response = await apiClient.get<Catalogue[]>("/api/famille/catalogues", {
-			params: { cl_NoParent, cL_Niveau },
-		});
-		return response.data;
+		return getCataloguesWithFallback(cl_NoParent, cL_Niveau);
 	},
 
 	// GET api/famille/central

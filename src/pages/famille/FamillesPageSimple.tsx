@@ -54,7 +54,7 @@ const FamillesPage: React.FC<FamillesPageProps> = ({
 
 	const columns: GridColDef[] = [
 		{
-			field: "FA_CodeFamille",
+			field: "fA_CodeFamille",
 			headerName: "Code famille",
 			width: 120,
 			renderCell: (params) => {
@@ -88,14 +88,14 @@ const FamillesPage: React.FC<FamillesPageProps> = ({
 			},
 		},
 		{
-			field: "FA_Intitule",
+			field: "fA_Intitule",
 			headerName: "Intitulé",
 			width: 200,
 			flex: 1,
 			renderCell: (params) => params.value || "",
 		},
 		{
-			field: "FA_Type",
+			field: "fA_Type",
 			headerName: "Type",
 			width: 80,
 			renderCell: (params) => {

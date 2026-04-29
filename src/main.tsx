@@ -3,7 +3,7 @@ import "./theme/theme.css";
 import "./locales/i18n";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router";
-import { worker } from "./_mock";
+// import { worker } from "./_mock"; // Désactivé pour utiliser le vrai backend
 import App from "./App";
 import menuService from "./api/services/menuService";
 import { registerLocalIcons } from "./components/icon";
@@ -14,12 +14,13 @@ import { urlJoin } from "./utils";
 
 await registerLocalIcons();
 
-await worker.start({
-	onUnhandledRequest: "bypass",
-	serviceWorker: {
-		url: urlJoin(GLOBAL_CONFIG.publicPath, "mockServiceWorker.js"),
-	},
-});
+// MSW désactivé pour utiliser le vrai backend
+// await worker.start({
+// 	onUnhandledRequest: "bypass",
+// 	serviceWorker: {
+// 		url: urlJoin(GLOBAL_CONFIG.publicPath, "mockServiceWorker.js"),
+// 	},
+// });
 
 if (GLOBAL_CONFIG.routerMode === "backend") {
 	await menuService.getMenuList();

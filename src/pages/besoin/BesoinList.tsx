@@ -20,6 +20,34 @@ import { ETAT_BESOIN_LABELS, getEtatBesoinProgressBar } from "@/utils/besoin.uti
 
 dayjs.locale("fr");
 
+const STYLES = `
+  .besoin-page {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    background: #f4f6f9;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .besoin-card {
+    flex: 1;
+    min-height: 0;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .besoin-grid {
+    flex: 1;
+    min-height: 0;
+  }
+`;
+
 interface Props {
 	onEdit: (b_No: number) => void;
 	onView: (b_No: number) => void;
@@ -88,9 +116,7 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 
 	const showRecapPlaceholder = useCallback((row: IBesoin) => {
 		const num = String(asRecord(row).b_Numero ?? asRecord(row).B_Numero ?? "");
-		toast.info(
-			`Récap de validation — ${num || "—"}\nÉquivalent de la popup ValidateurBesoin côté MVC : branchez l'API / circuit de validation pour afficher le détail ici.`,
-		);
+		
 	}, []);
 
 	const handleExportExcel = async () => {
@@ -284,7 +310,9 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 	};
 
 	return (
-		<Box sx={{ mx: "auto", maxWidth: 1400, px: 2, py: 2 }}>
+		<>
+			<style>{STYLES}</style>
+			<div className="besoin-page">
 			<Box
 				sx={{
 					display: "flex",
@@ -299,9 +327,7 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 				<Typography variant="h5" sx={{ mb: 0 }}>
 					Demandes de besoin
 				</Typography>
-				<Typography variant="body2" color="text.secondary">
-					Filtrez par période, état et colonnes dynamiques (champs libres) comme sur la vue MVC.
-				</Typography>
+				
 			</Box>
 
 			<Stack
@@ -418,7 +444,8 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 				</Stack>
 			</Stack>
 
-			<Box sx={{ mt: 2, height: 500 }}>
+			<div className="besoin-card">
+				<Box className="besoin-grid">
 				<DataGrid
 					rows={besoins}
 					columns={columns}
@@ -448,7 +475,9 @@ export default function BesoinList({ onEdit, onView, onNew }: Props) {
 						),
 					}}
 				/>
-			</Box>
-		</Box>
+				</Box>
+			</div>
+			</div>
+		</>
 	);
 }

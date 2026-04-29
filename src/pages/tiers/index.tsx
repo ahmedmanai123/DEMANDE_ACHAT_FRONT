@@ -1,24 +1,12 @@
-import TierForm from "@/pages/tiers/TierFormPage";
-import TierList from "@/pages/tiers/FournisseursPage";
 import { useState } from "react";
+import TierList from "@/pages/tiers/FournisseursPage";
 
 export default function TierPage() {
-	const [view, setView] = useState<"list" | "form">("list");
 	const [editId, setEditId] = useState<number>(0);
 
 	const handleEdit = (cbMarq: number) => {
 		setEditId(cbMarq);
-		setView("form");
 	};
 
-	const handleBack = () => {
-		setEditId(0);
-		setView("list");
-	};
-
-	return view === "list" ? (
-		<TierList onEdit={handleEdit} onNew={() => handleEdit(0)} />
-	) : (
-		<TierForm cbMarq={editId} onBack={handleBack} />
-	);
+	return <TierList onEdit={handleEdit} />;
 }

@@ -1,16 +1,16 @@
 export interface FAMILLEDto {
 	cbMarq: number; // Primary key
-	FA_CodeFamille: string; // Code famille
-	FA_Intitule: string; // Intitulé
-	FA_Type: number; // 0 = Détail, 1 = Total, 2 = Centralisateur
-	FA_Central?: number; // Centralisation
-	CL_No1?: number; // Catalogue niveau 1
-	CL_No2?: number; // Catalogue niveau 2
-	CL_No3?: number; // Catalogue niveau 3
-	CL_No4?: number; // Catalogue niveau 4
-	CL_Intitule1?: string; // Catalogue article
-	FA_DateCreation?: string; // Date de création
-	FA_DateModification?: string; // Date de modification
+	fA_CodeFamille: string; // Code famille
+	fA_Intitule: string; // Intitulé
+	fA_Type: number; // 0 = Détail, 1 = Total, 2 = Centralisateur
+	fA_Central: number; // Centralisation
+	cL_No1?: number; // Catalogue niveau 1
+	cL_No2?: number; // Catalogue niveau 2
+	cL_No3?: number; // Catalogue niveau 3
+	cL_No4?: number; // Catalogue niveau 4
+	cL_Intitule1?: string; // Catalogue article
+	fA_DateCreation?: string; // Date de création
+	fA_DateModification?: string; // Date de modification
 }
 
 export interface Catalogue {

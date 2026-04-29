@@ -1,10 +1,5 @@
 // src/pages/article/ArticleList.tsx
 import {
-	Add as AddIcon,
-	DeleteOutlined as DeleteIcon,
-	EditOutlined as EditIcon,
-} from "@mui/icons-material";
-import {
 	Box,
 	Button,
 	Chip,
@@ -12,6 +7,7 @@ import {
 	MenuItem,
 	Select,
 	Stack,
+	TablePagination,
 	TextField,
 	Typography,
 } from "@mui/material";
@@ -19,10 +15,10 @@ import type { GridColDef } from "@mui/x-data-grid";
 import { DataGrid } from "@mui/x-data-grid";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useArticleStore } from "@/store/useArticleStore";
-import type { IArticle, ICatalogue } from "@/types/article";
+import type { IArticle } from "@/types/article";
 
 // ================================================================
-// STYLES (Sidebar & Layout only — Table styles handled by MUI DataGrid)
+// STYLES (Layout only — Table styles handled by MUI DataGrid)
 // ================================================================
 const STYLES = `
   .art-page {
@@ -43,122 +39,45 @@ const STYLES = `
     overflow: hidden;
   }
 
-  .art-sidebar {
-    width: 240px;
+  .art-card {
+    flex: 1;
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    flex-shrink: 0;
-    border: 1px solid #e1e4e8;
-  }
-
-  .art-sidebar-header {
-    padding: 16px 18px;
-    font-size: 12px;
-    font-weight: 800;
-    color: #5c6b7f;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 1px solid #f0f2f5;
-    background: #fafbfc;
-    flex-shrink: 0;
-  }
-
-  .art-sidebar-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 0;
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e0 transparent;
-  }
-  .art-sidebar-scroll::-webkit-scrollbar {
-    width: 5px;
-  }
-  .art-sidebar-scroll::-webkit-scrollbar-thumb {
-    background-color: #cbd5e0;
-    border-radius: 10px;
-  }
-
-  .art-sidebar-item {
-    margin: 2px 8px;
-    padding: 10px 12px;
-    font-size: 13.5px;
-    color: #4a5568;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    user-select: none;
-    border-radius: 6px;
-  }
-
-  .art-sidebar-item:hover {
-    background: #f0f7ff;
-    color: #1a4f78;
-    transform: translateX(2px);
-  }
-
-  .art-sidebar-item.active {
-    background: linear-gradient(90deg, rgba(26,79,120,0.1) 0%, rgba(255,255,255,0) 100%);
-    color: #1a4f78;
-    font-weight: 600;
-    border-left: 4px solid #1a4f78;
-    padding-left: 10px;
-    border-radius: 4px 8px 8px 4px;
-  }
-
-  .art-sidebar-arrow {
-    font-size: 16px;
-    color: #cbd5e0;
-    font-weight: 300;
-    transition: color 0.2s;
-  }
-  .art-sidebar-item:hover .art-sidebar-arrow,
-  .art-sidebar-item.active .art-sidebar-arrow {
-    color: #1a4f78;
-  }
-
-  .art-card {
-    flex: 1;
-    min-width: 0;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-    border: 1px solid #e1e4e8;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .art-cat-breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-bottom: 1px solid #f0f2f5;
-    background: #fcfdfe;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-  }
-
-  .art-cat-sep {
-    font-size: 14px;
-    color: #cbd5e0;
-    margin: 0 4px;
+    min-height: 0;
   }
 
   .art-toolbar {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 12px 18px;
-    border-bottom: 1px solid #f0f2f5;
-    background: #fff;
-    flex-shrink: 0;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .art-filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .art-filter-field {
+    min-width: 150px;
+  }
+
+  .art-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .art-data-grid {
+    flex: 1;
+    min-height: 0;
   }
 
   .art-ref {
@@ -171,15 +90,6 @@ const STYLES = `
   .art-ref:hover { color: #2c5282; text-decoration: underline; }
 `;
 
-// ================================================================
-// TYPES
-// ================================================================
-interface CatLevel {
-	items: ICatalogue[];
-	selectedId: number;
-	label: string;
-}
-
 interface Props {
 	onEdit: (cbMarq: number) => void;
 	onNew: () => void;
@@ -189,27 +99,14 @@ interface Props {
 // COMPOSANT PRINCIPAL
 // ================================================================
 export default function ArticleList({ onEdit, onNew }: Props) {
-	const {
-		articles,
-		totalCount,
-		loading,
-		depots,
-		filter,
-		setFilter,
-		fetchArticles,
-		fetchDepots,
-		selectedId,
-		setSelectedId,
-		deleteArticle,
-	} = useArticleStore();
+	const { articles, loading, filter, setFilter, fetchArticles, fetchDepots, selectedId, setSelectedId, deleteArticle } =
+		useArticleStore();
 
 	const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 	const [colFilters, setColFilters] = useState<Record<string, string>>({});
+	const [page, setPage] = useState(0);
+	const [rowsPerPage, setRowsPerPage] = useState(10);
 	const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-	// ---- Catalogue state ----
-	const [catLevels, setCatLevels] = useState<CatLevel[]>([]);
-	const [, setCatLoading] = useState(false);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: fetchArticles/fetchDepots called on mount
 	useEffect(() => {
@@ -221,362 +118,178 @@ export default function ArticleList({ onEdit, onNew }: Props) {
 		fetchArticles();
 	}, [filter]); // eslint-disable-line
 
-	// Charger le premier niveau de catalogue au montage
+	// Debug pour voir la structure des données
 	useEffect(() => {
-		import("@/api/articleApi").then(({ articleApi }) => {
-			articleApi
-				.getCatalogues(0, 0)
-				.then(({ data }) => {
-					const items: ICatalogue[] = [{ value: 0, text: "Tous", isParent: false }, ...(data ?? [])];
-					setCatLevels([{ items, selectedId: 0, label: "Catalogue" }]);
-				})
-				.catch(() => {});
-		});
-	}, []);
-
-	// Met à jour le filtre catalogue à partir des niveaux
-	const applyCatFilter = (levels: CatLevel[]) => {
-		const ids = levels.map((l) => l.selectedId);
-		const patch: Record<string, number> = {};
-		for (let i = 1; i <= 4; i++) patch[`cL_No${i}`] = ids[i] ?? 0;
-		setFilter(patch as Parameters<typeof setFilter>[0]);
-	};
-
-	// Changement de sélection
-	const handleCatLevelChange = (levelIdx: number, value: number) => {
-		const currentLevel = catLevels[levelIdx];
-		if (!currentLevel) return;
-
-		const cat = currentLevel.items.find((c) => c.value === value);
-		if (!cat) return;
-
-		const newLevels = catLevels
-			.slice(0, levelIdx + 1)
-			.map((l, i) => (i === levelIdx ? { ...l, selectedId: value } : l));
-
-		if (cat.isParent && value !== 0) {
-			setCatLoading(true);
-			import("@/api/articleApi").then(({ articleApi }) => {
-				articleApi
-					.getCatalogues(value, levelIdx + 1)
-					.then(({ data }) => {
-						setCatLoading(false);
-						if (data && data.length > 0) {
-							const children: ICatalogue[] = [{ value, text: "Tous", isParent: false }, ...data];
-							newLevels.push({ items: children, selectedId: value, label: cat.text });
-						}
-						setCatLevels(newLevels);
-						applyCatFilter(newLevels);
-					})
-					.catch(() => {
-						setCatLoading(false);
-						setCatLevels(newLevels);
-						applyCatFilter(newLevels);
-					});
-			});
-		} else {
-			setCatLevels(newLevels);
-			applyCatFilter(newLevels);
+		console.log("Articles reçus:", articles);
+		if (articles.length > 0) {
+			console.log("Premier article:", articles[0]);
+			console.log("Clés du premier article:", Object.keys(articles[0] || {}));
 		}
-	};
+	}, [articles]);
 
-	const handleColFilter = (field: string, value: string) => {
-		const next = { ...colFilters, [field]: value };
-		setColFilters(next);
+	// Met à jour le filtre colonne avec debounce
+	const updateColFilter = (field: string, value: string) => {
 		if (debounce.current) clearTimeout(debounce.current);
 		debounce.current = setTimeout(() => {
-			const map: Record<string, string> = {
-				aR_Ref: "aR_Ref",
-				aR_Design: "aR_Design",
-				fA_Intitule: "fA_CodeFamille",
-				aR_PrixAch: "aR_PrixAch",
-			};
-			const params = Object.fromEntries(
-				Object.entries(next)
-					.filter(([, v]) => v !== "")
-					.map(([k, v]) => [map[k] ?? k, v]),
-			);
-			setFilter(params as Parameters<typeof setFilter>[0]);
-		}, 400);
+			setColFilters((prev) => ({ ...prev, [field]: value }));
+		}, 300);
 	};
 
-	const depotCols = useMemo<GridColDef<IArticle>[]>(
-		() =>
-			depots.map((d) => ({
-				field: `DE_${d.dE_No}`,
-				headerName: d.dE_Intitule,
-				width: 130,
-				align: "right",
-				renderCell: (params) => {
-					const v = (params.row as Record<string, unknown>)[`DE_${d.dE_No}`];
-					const n = typeof v === "number" ? v : 0;
-					return (
-						<span style={{ color: n > 0 ? "#2b6cb0" : "#a0aec0", fontWeight: n > 0 ? 600 : 400 }}>
-							{n}
-						</span>
-					);
-				},
-			})),
-		[depots],
-	);
-
-	const columns = useMemo<GridColDef<IArticle>[]>(
+	// Colonnes du DataGrid
+	const columns: GridColDef[] = useMemo(
 		() => [
 			{
 				field: "aR_Ref",
 				headerName: "Référence",
-				width: 130,
+				width: 150,
 				renderCell: (params) => (
-					<button
-						type="button"
+					// biome-ignore lint/a11y/useValidAnchor: <explanation>
+					<a
+						href="#"
 						className="art-ref"
-						onClick={() => onEdit(params.row.cbMarq)}
-						style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+						onClick={(e) => {
+							e.preventDefault();
+							onEdit(params.row.cbMarq);
+						}}
 					>
-						{params.value as string}
-					</button>
+						{params.value}
+					</a>
 				),
 			},
-			{ field: "aR_Design", headerName: "Désignation", width: 220 },
-			{ field: "fA_Intitule", headerName: "Famille", width: 160 },
+			{ field: "aR_Design", headerName: "Désignation", width: 300, flex: 1 },
+			{
+				field: "fA_CodeFamille",
+				headerName: "Famille",
+				width: 120,
+			},
+			{
+				field: "aR_PrixVen",
+				headerName: "Prix Vente",
+				width: 100,
+				type: "number",
+				valueFormatter: (params) => {
+					const value = params?.value;
+					return value != null ? `${Number(value).toFixed(2)} €` : "";
+				},
+			},
 			{
 				field: "aR_PrixAch",
 				headerName: "Prix Achat",
-				width: 110,
-				align: "right",
-				renderCell: (params) =>
-					params.value ? (
-						<span style={{ fontWeight: 500, color: "#2d3748" }}>{(params.value as number).toFixed(3)}</span>
-					) : (
-						""
-					),
+				width: 100,
+				type: "number",
+				valueFormatter: (params) => {
+					const value = params?.value;
+					return value != null ? `${Number(value).toFixed(2)} €` : "";
+				},
 			},
-			...depotCols,
 			{
 				field: "totalStock",
-				headerName: "Total Stock",
-				width: 110,
-				align: "right",
+				headerName: "Stock",
+				width: 80,
+				type: "number",
+			},
+			{
+				field: "DE_No",
+				headerName: "Dépôt",
+				width: 100,
 				renderCell: (params) => {
-					const v = (params.value as number) ?? 0;
-					return (
-						<Chip
-							label={v}
-							size="small"
-							sx={{
-								minWidth: 40,
-								fontSize: 11,
-								fontWeight: 600,
-								borderRadius: 1,
-								bgcolor: v > 0 ? "#3182ce" : "#cbd5e0",
-								color: "#fff",
-							}}
-						/>
-					);
+					const depot = params.row.depot;
+					return depot ? depot.dE_Intitule : params.value;
 				},
 			},
 			{
 				field: "aR_Photo",
-				headerName: "Photo",
-				width: 60,
-				align: "center",
-				sortable: false,
-				filterable: false,
-				renderCell: (params) =>
-					params.value ? (
-						<button
-							type="button"
-							style={{
-								width: 32,
-								height: 32,
-								padding: 0,
-								border: "none",
-								background: "none",
-								cursor: "pointer",
-							}}
-							onClick={(e) => {
-								e.stopPropagation();
-								setLightboxSrc(params.value as string);
-							}}
-						>
-							<img
-								src={params.value as string}
-								alt=""
-								style={{
-									width: 32,
-									height: 32,
-									objectFit: "cover",
-									borderRadius: 6,
-									boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-								}}
-							/>
-						</button>
-					) : null,
+				headerName: "Image",
+				width: 80,
+				renderCell: (params) => {
+					if (!params.value) return null;
+					return (
+						<img
+							src={params.value}
+							alt="Article"
+							style={{ width: 40, height: 40, objectFit: "cover", cursor: "pointer" }}
+							onClick={() => setLightboxSrc(params.value)}
+						/>
+					);
+				},
 			},
 		],
-		[depotCols, onEdit],
+		[onEdit],
 	);
-
-	const handleDelete = () => {
-		if (!selectedId) return;
-		if (window.confirm("Voulez-vous vraiment supprimer cet article ?")) {
-			deleteArticle(selectedId);
-		}
-	};
 
 	return (
 		<>
 			<style>{STYLES}</style>
-
 			<div className="art-page">
 				<div className="art-main">
-					{/* ===== SIDEBAR (NIVEAU 1) ===== */}
-					{catLevels.length > 0 && (
-						<div className="art-sidebar">
-							<div className="art-sidebar-header">Catalogue</div>
-							<div className="art-sidebar-scroll">
-								{catLevels[0].items.map((cat) => (
-									<button
-										key={cat.value}
-										type="button"
-										className={`art-sidebar-item ${catLevels[0].selectedId === cat.value ? "active" : ""}`}
-										onClick={() => handleCatLevelChange(0, cat.value)}
-										style={{ width: "calc(100% - 16px)", textAlign: "left" }}
-									>
-										<span>{cat.text}</span>
-										{cat.isParent && <span className="art-sidebar-arrow">›</span>}
-									</button>
-								))}
-							</div>
-						</div>
-					)}
-
-					{/* ===== ZONE PRINCIPALE (TABLE) ===== */}
 					<div className="art-card">
-						{/* ---- BREADCRUMB HORIZONTAL (NIVEAUX 2+) ---- */}
-						{catLevels.length > 1 && (
-							<div className="art-cat-breadcrumb">
-								{catLevels.slice(1).map((level, idx) => {
-									const realIndex = idx + 1;
-									return (
-										<span key={realIndex} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-											<span className="art-cat-sep">/</span>
-											<FormControl size="small" sx={{ width: 180 }}>
-												<Select
-													value={level.selectedId}
-													onChange={(e) => handleCatLevelChange(realIndex, e.target.value as number)}
-													displayEmpty
-												>
-													{level.items.map((c) => (
-														<MenuItem key={c.value} value={c.value}>
-															<span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%" }}>
-																<span>{c.text}</span>
-																{c.isParent && <span style={{ fontSize: 12, color: "#a0aec0", fontWeight: 300 }}>›</span>}
-															</span>
-														</MenuItem>
-													))}
-												</Select>
-											</FormControl>
-										</span>
-									);
-								})}
-							</div>
-						)}
-
-						{/* ---- TOOLBAR ---- */}
 						<div className="art-toolbar">
-							<Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-								<Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1a202c" }}>
-									Liste des Articles
-								</Typography>
-								<FormControl size="small" sx={{ width: 70 }}>
+							<div className="art-filters">
+								<FormControl size="small" className="art-filter-field">
+									<TextField
+										size="small"
+										placeholder="Référence"
+										onChange={(e) => updateColFilter("AR_Ref", e.target.value)}
+									/>
+								</FormControl>
+								<FormControl size="small" className="art-filter-field">
+									<TextField
+										size="small"
+										placeholder="Désignation"
+										onChange={(e) => updateColFilter("AR_Design", e.target.value)}
+									/>
+								</FormControl>
+								<FormControl size="small" className="art-filter-field">
 									<Select
-										value={filter.pageSize}
-										onChange={(e) => setFilter({ pageSize: e.target.value as number, pageIndex: 1 })}
 										displayEmpty
+										value={filter.DE_No ?? ""}
+										onChange={(e) => setFilter({ DE_No: e.target.value || undefined })}
 									>
-										{[10, 20, 50, 100].map((n) => (
-											<MenuItem key={n} value={n}>{n}</MenuItem>
-										))}
+										<MenuItem value="">Tous les dépôts</MenuItem>
+										{/* Les options de dépôts seront ajoutées depuis le store */}
 									</Select>
 								</FormControl>
-								<TextField
-									placeholder="Référence"
-									size="small"
-									sx={{ width: 120 }}
-									value={colFilters["aR_Ref"] ?? ""}
-									onChange={(e) => handleColFilter("aR_Ref", e.target.value)}
-								/>
-								<TextField
-									placeholder="Désignation"
-									size="small"
-									sx={{ width: 160 }}
-									value={colFilters["aR_Design"] ?? ""}
-									onChange={(e) => handleColFilter("aR_Design", e.target.value)}
-								/>
-								<TextField
-									placeholder="Famille"
-									size="small"
-									sx={{ width: 140 }}
-									value={colFilters["fA_Intitule"] ?? ""}
-									onChange={(e) => handleColFilter("fA_Intitule", e.target.value)}
-								/>
-							</Stack>
-							<Stack direction="row" spacing={1}>
-								<Button
-									variant="contained"
-									size="small"
-									startIcon={<AddIcon />}
-									onClick={onNew}
-									sx={{ bgcolor: "#1a4f78", "&:hover": { bgcolor: "#163d5e" } }}
-								>
-									Nouveau
-								</Button>
-								<Button
-									variant="outlined"
-									size="small"
-									startIcon={<EditIcon />}
-									onClick={() => onEdit(selectedId)}
-									disabled={!selectedId}
-								>
-									Modifier
-								</Button>
-								<Button
-									variant="outlined"
-									size="small"
-									color="error"
-									startIcon={<DeleteIcon />}
-									onClick={handleDelete}
-									disabled={!selectedId}
-								>
-									Supprimer
-								</Button>
-							</Stack>
+							</div>
 						</div>
 
-						{/* ---- DATA GRID ---- */}
-						<Box sx={{ flex: 1, minHeight: 0 }}>
+						{/* Pagination en haut */}
+						<TablePagination
+							component="div"
+							count={articles.length}
+							page={page}
+							onPageChange={(_, newPage) => setPage(newPage)}
+							rowsPerPage={rowsPerPage}
+							onRowsPerPageChange={(e) => {
+								setRowsPerPage(parseInt(e.target.value, 10));
+								setPage(0);
+							}}
+							rowsPerPageOptions={[5, 10, 20, 50, 100]}
+							labelRowsPerPage="Lignes par page"
+							labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+							sx={{ borderBottom: "1px solid #e2e8f0" }}
+						/>
+
+						<Box className="art-data-grid">
 							<DataGrid
 								rows={articles}
 								columns={columns}
 								loading={loading}
-								rowCount={totalCount}
-								paginationMode="server"
+								pageSizeOptions={[5, 10, 20, 50, 100]}
 								getRowId={(row) => row.cbMarq}
-								onRowClick={({ row }) => setSelectedId(row.cbMarq)}
-								onRowDoubleClick={({ row }) => onEdit(row.cbMarq)}
-								density="compact"
+								pagination
+								paginationMode="client"
+								autoHeight={false}
 								sx={{
-									"& .MuiDataGrid-row.Mui-selected": {
-										bgcolor: "action.selected",
+									"& .MuiDataGrid-root": {
+										border: "none",
 									},
-								}}
-								slots={{
-									noRowsOverlay: () => (
-										<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-											<Typography color="text.secondary">Aucune donnée</Typography>
-										</Box>
-									),
+									"& .MuiDataGrid-columnHeaders": {
+										backgroundColor: "#f8fafc",
+										borderBottom: "1px solid #e2e8f0",
+									},
+									"& .MuiDataGrid-cell": {
+										borderBottom: "1px solid #f1f5f9",
+									},
 								}}
 							/>
 						</Box>
@@ -584,30 +297,31 @@ export default function ArticleList({ onEdit, onNew }: Props) {
 				</div>
 			</div>
 
-			{/* Lightbox image */}
+			{/* Lightbox pour les images */}
 			{lightboxSrc && (
-				<Box
-					sx={{
+				// biome-ignore lint/a11y/noStaticElementInteractions: <explanation>
+				<div
+					style={{
 						position: "fixed",
 						top: 0,
 						left: 0,
-						width: "100vw",
-						height: "100vh",
-						bgcolor: "rgba(0,0,0,0.8)",
-						zIndex: 9999,
+						right: 0,
+						bottom: 0,
+						background: "rgba(0,0,0,0.8)",
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "center",
+						zIndex: 9999,
 						cursor: "pointer",
 					}}
 					onClick={() => setLightboxSrc(null)}
 				>
 					<img
 						src={lightboxSrc}
-						alt=""
+						alt="Agrandissement"
 						style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain" }}
 					/>
-				</Box>
+				</div>
 			)}
 		</>
 	);

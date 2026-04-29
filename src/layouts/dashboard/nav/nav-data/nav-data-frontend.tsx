@@ -75,6 +75,11 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/familles",
 				icon: <Icon icon="solar:folder-with-files-bold-duotone" size="24" />,
 			},
+			{
+				title: "Représentants",
+				path: "/representants",
+				icon: <Icon icon="solar:users-group-two-rounded-bold-duotone" size="24" />,
+			},
 		],
 	},
 	{

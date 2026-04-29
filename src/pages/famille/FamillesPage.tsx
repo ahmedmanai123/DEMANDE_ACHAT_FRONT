@@ -1,14 +1,18 @@
-import { Box, Chip, FormControl, MenuItem, Select, Stack, Typography } from "@mui/material";
+import {
+	Box,
+	Chip,
+	FormControl,
+	MenuItem,
+	Select,
+	TablePagination,
+	Typography,
+} from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { DataGrid } from "@mui/x-data-grid";
-import { useEffect, useState } from "react";
-import { articleApi } from "@/api/articleApi";
+import { useEffect, useMemo, useState } from "react";
 import { useFamilleStore } from "@/store/useFamilleStore";
-import type { ICatalogue } from "@/types/article";
+import type { FAMILLEDto } from "@/types/famille";
 
-// ================================================================
-// STYLES — Sidebar gauche + sous-catalogues en haut
-// ================================================================
 const STYLES = `
   .fam-page {
     display: flex;
@@ -22,307 +26,167 @@ const STYLES = `
 
   .fam-main {
     display: flex;
-    gap: 12px;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    gap: 12px;
   }
 
-  /* ---- Left sidebar (niveau 1) ---- */
-  .fam-sidebar {
-    width: 220px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex-shrink: 0;
-    border: 1px solid #e1e4e8;
-  }
-
-  .fam-sidebar-header {
-    padding: 14px 16px;
-    font-size: 12px;
-    font-weight: 800;
-    color: #5c6b7f;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 1px solid #f0f2f5;
-    background: #fafbfc;
-    flex-shrink: 0;
-  }
-
-  .fam-sidebar-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding: 6px 0;
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e0 transparent;
-  }
-  .fam-sidebar-scroll::-webkit-scrollbar {
-    width: 4px;
-  }
-  .fam-sidebar-scroll::-webkit-scrollbar-thumb {
-    background-color: #cbd5e0;
-    border-radius: 10px;
-  }
-
-  .fam-sidebar-item {
-    padding: 9px 14px;
-    font-size: 13px;
-    color: #4a5568;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    user-select: none;
-    border-left: 3px solid transparent;
-  }
-
-  .fam-sidebar-item:hover {
-    background: #edf2f7;
-    color: #2b6cb0;
-  }
-
-  .fam-sidebar-item.active {
-    background: #ebf4ff;
-    color: #1a4f78;
-    font-weight: 600;
-    border-left-color: #2b6cb0;
-  }
-
-  .fam-sidebar-arrow {
-    font-size: 14px;
-    color: #a0aec0;
-    font-weight: 300;
-  }
-  .fam-sidebar-item:hover .fam-sidebar-arrow,
-  .fam-sidebar-item.active .fam-sidebar-arrow {
-    color: #2b6cb0;
-  }
-
-  /* ---- Right zone ---- */
   .fam-right {
     flex: 1;
-    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0;
-    overflow: hidden;
+    min-height: 0;
   }
 
-  /* ---- Top sub-catalogue bar (niveaux 2+) ---- */
-  .fam-cat-bar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: #f7f8fa;
-    border: 1px solid #e1e4e8;
-    border-bottom: none;
-    border-radius: 10px 10px 0 0;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-  }
-
-  .fam-cat-bar-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #718096;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-right: 4px;
-  }
-
-  .fam-cat-sep {
-    font-size: 14px;
-    color: #cbd5e0;
-    margin: 0 2px;
-  }
-
-  /* ---- Main card ---- */
   .fam-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
-    background: #fff;
-    border-radius: 0 0 10px 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-    border: 1px solid #e1e4e8;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
   }
 
   .fam-toolbar {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 18px;
-    border-bottom: 1px solid #f0f2f5;
-    background: #fff;
-    flex-shrink: 0;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .fam-page-size-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .fam-page-size-label {
+    font-size: 12px;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+
+  .fam-table-wrap {
+    flex: 1;
+    overflow: auto;
+    background: white;
   }
 
   .fam-ref {
-    color: #1a4f78;
-    font-weight: 600;
+    color: #e2552d;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    padding: 0;
     cursor: pointer;
-    text-decoration: none;
-    transition: color 0.2s;
+    font: inherit;
   }
-  .fam-ref:hover { color: #2c5282; text-decoration: underline; }
-`;
 
-// ================================================================
-// TYPES
-// ================================================================
-interface CatLevel {
-	items: ICatalogue[];
-	selectedId: number;
-	label: string;
-}
+  .fam-ref:hover {
+    color: #d9440f;
+  }
+`;
 
 interface Props {
 	onEdit: (cbMarq: number) => void;
 }
 
-// ================================================================
-// COMPOSANT PRINCIPAL
-// ================================================================
 export default function FamillesPage({ onEdit }: Props) {
-	const { familles, loading, pagination, catalogueSelection, fetchFamilles, setPagination, setCatalogueSelection } =
-		useFamilleStore();
+	const { familles, loading, pagination, filters, fetchFamilles, setPagination, setFilters } = useFamilleStore();
 
-	// ---- Catalogue state (listes verticales en cascade) ----
-	const [catLevels, setCatLevels] = useState<CatLevel[]>([]);
-	const [, setCatLoading] = useState(false);
+	const [codeFilter, setCodeFilter] = useState("");
+	const [intituleFilter, setIntituleFilter] = useState("");
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: fetchFamilles called on mount
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		fetchFamilles();
-	}, []);
+	}, [fetchFamilles, pagination.current, pagination.pageSize, filters]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: fetchFamilles called on mount and catalogue change
 	useEffect(() => {
-		fetchFamilles();
-	}, [catalogueSelection]);
+		const timeout = window.setTimeout(() => {
+			setFilters({
+				FA_CodeFamille: codeFilter.trim() || undefined,
+				FA_Intitule: intituleFilter.trim() || undefined,
+			});
+		}, 250);
 
-	// Charger le premier niveau de catalogue au montage
-	useEffect(() => {
-		articleApi
-			.getCatalogues(0, 0)
-			.then(({ data }) => {
-				const items: ICatalogue[] = [{ value: 0, text: "Tous", isParent: false }, ...(data ?? [])];
-				setCatLevels([{ items, selectedId: 0, label: "Catalogue" }]);
-			})
-			.catch(() => {});
-	}, []);
+		return () => window.clearTimeout(timeout);
+	}, [codeFilter, intituleFilter, setFilters]);
 
-	// Met à jour le filtre catalogue à partir des niveaux
-	const applyCatFilter = (levels: CatLevel[]) => {
-		const ids = levels.map((l) => l.selectedId);
-		const selection: Record<string, number> = {};
-		for (let i = 1; i <= 4; i++) selection[`CL_No${i}`] = ids[i] ?? 0;
-		setCatalogueSelection(selection as Parameters<typeof setCatalogueSelection>[0]);
+	const renderTypeChip = (value: number) => {
+		const labels: Record<number, string> = { 0: "Detail", 1: "Total", 2: "Centralisateur" };
+		const label = labels[value] ?? "";
+
+		return (
+			<Chip
+				label={label}
+				size="small"
+				sx={{
+					fontSize: 11,
+					fontWeight: 600,
+					borderRadius: 1,
+					bgcolor: value === 0 ? "#48bb78" : value === 1 ? "#4299e1" : "#ed8936",
+					color: "#fff",
+				}}
+			/>
+		);
 	};
 
-	// Changement de sélection catalogue — charge les enfants dans la colonne suivante
-	const handleCatLevelChange = (levelIdx: number, value: number) => {
-		const currentLevel = catLevels[levelIdx];
-		if (!currentLevel) return;
-
-		const cat = currentLevel.items.find((c) => c.value === value);
-		if (!cat) return;
-
-		// Garder les niveaux jusqu'au courant, mettre à jour la sélection
-		const newLevels = catLevels
-			.slice(0, levelIdx + 1)
-			.map((l, i) => (i === levelIdx ? { ...l, selectedId: value } : l));
-
-		if (cat.isParent && value !== 0) {
-			setCatLoading(true);
-			articleApi
-				.getCatalogues(value, levelIdx + 1)
-				.then(({ data }) => {
-					setCatLoading(false);
-					if (data && data.length > 0) {
-						const children: ICatalogue[] = [{ value, text: "Tous", isParent: false }, ...data];
-						newLevels.push({ items: children, selectedId: value, label: cat.text });
-					}
-					setCatLevels(newLevels);
-					// Appliquer les filtres catalogue après mise à jour
-					applyCatFilter(newLevels);
-				})
-				.catch(() => {
-					setCatLoading(false);
-					setCatLevels(newLevels);
-					// Appliquer les filtres catalogue même en cas d'erreur
-					applyCatFilter(newLevels);
-				});
-		} else {
-			setCatLevels(newLevels);
-			// Appliquer les filtres catalogue pour les sélections sans enfants
-			applyCatFilter(newLevels);
-		}
-	};
-
-	const columns: GridColDef[] = [
-		{
-			field: "FA_CodeFamille",
-			headerName: "Code famille",
-			width: 130,
-			renderCell: (params) => (
-				<button
-					type="button"
-					className="fam-ref"
-					onClick={() => onEdit(params.row.cbMarq)}
-					style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-				>
-					{params.value as string}
-				</button>
-			),
-		},
-		{ field: "FA_Intitule", headerName: "Intitulé", width: 220, flex: 1 },
-		{
-			field: "FA_Type",
-			headerName: "Type",
-			width: 130,
-			renderCell: (params) => {
-				const value = params.value as number;
-				const labels: Record<number, string> = { 0: "Détail", 1: "Total", 2: "Centralisateur" };
-				const label = labels[value] ?? "";
-				return (
-					<Chip
-						label={label}
-						size="small"
-						sx={{
-							fontSize: 11,
-							fontWeight: 600,
-							borderRadius: 1,
-							bgcolor: value === 0 ? "#48bb78" : value === 1 ? "#4299e1" : "#ed8936",
-							color: "#fff",
+	// Colonnes du DataGrid pour les familles
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	const columns: GridColDef[] = useMemo(
+		() => [
+			{
+				field: "fA_Type",
+				headerName: "Type",
+				width: 120,
+				renderCell: (params) => renderTypeChip(params.value),
+			},
+			{
+				field: "fA_CodeFamille",
+				headerName: "Code famille",
+				width: 170,
+				renderCell: (params) => (
+					// biome-ignore lint/a11y/useValidAnchor: <explanation>
+					<a
+						href="#"
+						className="fam-ref"
+						onClick={(e) => {
+							e.preventDefault();
+							onEdit(params.row.cbMarq);
 						}}
-					/>
-				);
+					>
+						{params.value}
+					</a>
+				),
 			},
-		},
-		{
-			field: "FA_Central",
-			headerName: "Centralisation",
-			width: 130,
-			renderCell: (params) => {
-				const value = params.value as number;
-				return value === 1 ? "Oui" : "Non";
+			{
+				field: "fA_Intitule",
+				headerName: "Intitule",
+				minWidth: 240,
+				flex: 1,
 			},
-		},
-		{
-			field: "CL_Intitule1",
-			headerName: "Catalogue article",
-			width: 160,
-		},
-	];
+			{
+				field: "fA_Central",
+				headerName: "Centralisation",
+				width: 190,
+				renderCell: (params) => (params.value === 1 ? "Oui" : "Non"),
+			},
+			{
+				field: "cL_Intitule1",
+				headerName: "Catalogue article",
+				width: 190,
+				renderCell: (params) => params.value || "",
+			},
+		],
+		[onEdit],
+	);
+
+	const rows = familles as FAMILLEDto[];
 
 	return (
 		<>
@@ -330,133 +194,62 @@ export default function FamillesPage({ onEdit }: Props) {
 
 			<div className="fam-page">
 				<div className="fam-main">
-					{/* ===== LEFT SIDEBAR — Catalogue niveau 1 ===== */}
-					{catLevels.length > 0 && (
-						<div className="fam-sidebar">
-							<div className="fam-sidebar-header">Catalogue</div>
-							<div className="fam-sidebar-scroll">
-								{catLevels[0].items.map((cat, catIdx) => (
-									<button
-										key={`cat0-${catIdx}-${cat.value}`}
-										type="button"
-										className={`fam-sidebar-item ${catLevels[0].selectedId === cat.value ? "active" : ""}`}
-										onClick={() => handleCatLevelChange(0, cat.value)}
-										style={{
-											width: "100%",
-											textAlign: "left",
-											background: "none",
-											border: "none",
-											padding: "9px 14px",
-											cursor: "pointer",
-										}}
-									>
-										<span>{cat.text}</span>
-										{cat.isParent && <span className="fam-sidebar-arrow">›</span>}
-									</button>
-								))}
-							</div>
-						</div>
-					)}
-
-					{/* ===== RIGHT ZONE ===== */}
 					<div className="fam-right">
-						{/* ---- TOP BAR — Sous-catalogues (niveaux 2+) ---- */}
-						{catLevels.length > 1 && (
-							<div className="fam-cat-bar">
-								{catLevels.slice(1).map((level, idx) => {
-									const realIndex = idx + 1;
-									return (
-										<span key={`subcat-${realIndex}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-											<span className="fam-cat-sep">/</span>
-											<span className="fam-cat-bar-label">{level.label}</span>
-											<FormControl size="small" sx={{ minWidth: 160 }}>
-												<Select
-													value={level.selectedId}
-													onChange={(e) => handleCatLevelChange(realIndex, e.target.value as number)}
-													displayEmpty
-												>
-													{level.items.map((c, cIdx) => (
-														<MenuItem key={`subcat${realIndex}-${cIdx}-${c.value}`} value={c.value}>
-															<span
-																style={{
-																	display: "flex",
-																	alignItems: "center",
-																	justifyContent: "space-between",
-																	gap: 12,
-																	width: "100%",
-																}}
-															>
-																<span>{c.text}</span>
-																{c.isParent && (
-																	<span style={{ fontSize: 12, color: "#a0aec0", fontWeight: 300 }}>›</span>
-																)}
-															</span>
-														</MenuItem>
-													))}
-												</Select>
-											</FormControl>
-										</span>
-									);
-								})}
-							</div>
-						)}
-
-						{/* ---- MAIN CARD ---- */}
 						<div className="fam-card">
-							{/* ---- TOOLBAR ---- */}
 							<div className="fam-toolbar">
-								<Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-									<Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1a202c" }}>
-										Liste des Familles
-									</Typography>
-									<FormControl size="small" sx={{ width: 70 }}>
+								<div className="fam-page-size-wrap">
+									<span className="fam-page-size-label">Lignes :</span>
+									<FormControl size="small" sx={{ width: 70, minWidth: 70 }}>
 										<Select
 											value={pagination.pageSize}
-											onChange={(e) => setPagination({ pageSize: e.target.value as number, current: 1 })}
-											displayEmpty
+											onChange={(e) => setPagination({ pageSize: Number(e.target.value), current: 1 })}
 										>
-											{[5, 10, 20, 50, 100].map((n) => (
-												<MenuItem key={n} value={n}>
-													{n}
+											{[5, 10, 20, 50, 100].map((count) => (
+												<MenuItem key={count} value={count}>
+													{count}
 												</MenuItem>
 											))}
 										</Select>
 									</FormControl>
-								</Stack>
+								</div>
+
+								<TablePagination
+									component="div"
+									count={pagination.total}
+									page={pagination.current - 1}
+									onPageChange={(_, newPage) => setPagination({ current: newPage + 1 })}
+									rowsPerPage={pagination.pageSize}
+									onRowsPerPageChange={(e) =>
+										setPagination({
+											pageSize: Number(e.target.value),
+											current: 1,
+										})
+									}
+									rowsPerPageOptions={[5, 10, 20, 50, 100]}
+									labelRowsPerPage="Lignes par page"
+									labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+									sx={{ border: "none" }}
+								/>
 							</div>
 
-							{/* ---- DATA GRID ---- */}
-							<Box sx={{ flex: 1, minHeight: 0 }}>
+							<Box className="fam-table-wrap">
 								<DataGrid
-									rows={familles}
+									rows={rows}
 									columns={columns}
 									loading={loading}
-									rowCount={pagination.total}
-									paginationMode="server"
+									hideFooter={true}
 									getRowId={(row) => row.cbMarq}
-									paginationModel={{
-										page: pagination.current - 1,
-										pageSize: pagination.pageSize,
-									}}
-									pageSizeOptions={[5, 10, 20, 50]}
-									onPaginationModelChange={(model) => {
-										setPagination({
-											current: model.page + 1,
-											pageSize: model.pageSize,
-										});
-									}}
-									density="compact"
 									sx={{
-										"& .MuiDataGrid-row.Mui-selected": {
-											bgcolor: "action.selected",
+										"& .MuiDataGrid-root": {
+											border: "none",
 										},
-									}}
-									slots={{
-										noRowsOverlay: () => (
-											<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-												<Typography color="text.secondary">Aucune donnée</Typography>
-											</Box>
-										),
+										"& .MuiDataGrid-columnHeaders": {
+											backgroundColor: "#f8fafc",
+											borderBottom: "1px solid #e2e8f0",
+										},
+										"& .MuiDataGrid-cell": {
+											borderBottom: "1px solid #f1f5f9",
+										},
 									}}
 								/>
 							</Box>

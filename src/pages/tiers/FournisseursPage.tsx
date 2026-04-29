@@ -3,16 +3,13 @@ import {
 	Alert,
 	Box,
 	Breadcrumbs,
-	Button,
 	Chip,
-	FormControl,
 	Link,
-	MenuItem,
-	Select,
 	Snackbar,
+	TablePagination,
 	Typography,
 } from "@mui/material";
-import { DataGrid, type GridColDef, type GridRowSelectionModel } from "@mui/x-data-grid";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTiersStore } from "@/store/useTiersStore";
@@ -35,12 +32,10 @@ const FournisseursPage: React.FC<FournisseursPageProps> = ({
 	idInput2,
 	champForSelect2,
 	onEdit,
-	onNew,
 }) => {
 	const navigate = useNavigate();
 	const { tiers, loading, pagination, fetchTiers, setSelectedTier, setPagination } = useTiersStore();
 
-	const [rowSelectionModel, setRowSelectionModel] = useState<number[]>([]);
 	const [snackbar, setSnackbar] = useState<{
 		open: boolean;
 		message: string;
@@ -57,7 +52,7 @@ const FournisseursPage: React.FC<FournisseursPageProps> = ({
 
 	useEffect(() => {
 		fetchTiers();
-	}, [fetchTiers]);
+	}, [fetchTiers, pagination.current, pagination.pageSize]);
 
 	const handleRowClick = (record: any) => {
 		setSelectedTier(record);
@@ -205,47 +200,36 @@ const FournisseursPage: React.FC<FournisseursPageProps> = ({
 				</>
 			)}
 
-			<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-				<FormControl size="small" sx={{ minWidth: 120 }}>
-					<Select
-						value={pagination.pageSize}
-						onChange={(e) => setPagination({ pageSize: Number(e.target.value) })}
-						displayEmpty
-					>
-						<MenuItem value={5}>5 lignes</MenuItem>
-						<MenuItem value={10}>10 lignes</MenuItem>
-						<MenuItem value={25}>25 lignes</MenuItem>
-						<MenuItem value={50}>50 lignes</MenuItem>
-						<MenuItem value={100}>100 lignes</MenuItem>
-					</Select>
-				</FormControl>
-			</Box>
-
 			<Box sx={{ height: 600, width: "100%" }}>
+				<TablePagination
+					component="div"
+					count={pagination.total}
+					page={pagination.current - 1}
+					onPageChange={(_, newPage) => {
+						setPagination({ current: newPage + 1 });
+					}}
+					rowsPerPage={pagination.pageSize}
+					onRowsPerPageChange={(e) => {
+						setPagination({
+							pageSize: Number(e.target.value),
+							current: 1,
+						});
+					}}
+					rowsPerPageOptions={[5, 10, 20, 50, 100]}
+					labelRowsPerPage="Lignes par page"
+					labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+					sx={{ borderBottom: "1px solid #e2e8f0", mb: 1 }}
+				/>
+
 				<DataGrid
 					rows={tiers}
 					columns={columns}
 					getRowId={(row) => (row as any).cbMarq || (row as any).cBMarq || Math.random()}
 					loading={loading}
-					paginationMode="server"
-					paginationModel={{
-						page: pagination.current - 1,
-						pageSize: pagination.pageSize,
-					}}
-					rowCount={pagination.total}
-					pageSizeOptions={[5, 10, 20, 50]}
-					onPaginationModelChange={(model) => {
-						setPagination({
-							current: model.page + 1,
-							pageSize: model.pageSize,
-						});
-					}}
+					hideFooter
 					onRowClick={(params) => handleRowClick(params.row)}
 					onRowDoubleClick={(params) => handleRowDoubleClick(params.row)}
 					checkboxSelection
-					onRowSelectionModelChange={(newSelection) => {
-						setRowSelectionModel(newSelection as unknown as number[]);
-					}}
 					sx={{
 						"& .MuiDataGrid-row:hover": {
 							backgroundColor: "#f5f5f5",

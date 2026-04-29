@@ -100,7 +100,15 @@ export const useFamilleStore = create<FamilleState & FamilleActions>()(
             ...catalogueSelection,
           };
 
+          console.log("Paramètres complets envoyés à GetFamilles:", params);
+          console.log("Filters:", filters);
+          console.log("CatalogueSelection:", catalogueSelection);
+
           const response = await familleService.getFamilles(params);
+          console.log("Réponse API reçue:", response);
+          console.log("Nombre de familles reçues:", response.data?.length || 0);
+          console.log("Première famille:", response.data?.[0]);
+          
           const responseTotal = (response as any).itemsCount || response.total || 0;
 
           set({
@@ -111,6 +119,8 @@ export const useFamilleStore = create<FamilleState & FamilleActions>()(
             },
             loading: false,
           });
+          
+          console.log("État familles mis à jour dans le store:", response.data || []);
         } catch (error: any) {
           set({
             error: error.message || "Erreur lors du chargement des familles",
@@ -213,6 +223,7 @@ export const useFamilleStore = create<FamilleState & FamilleActions>()(
       setCatalogueSelection: (selection) => {
         set((state) => ({
           catalogueSelection: { ...state.catalogueSelection, ...selection },
+          pagination: { ...state.pagination, current: 1 },
         }));
       },
 

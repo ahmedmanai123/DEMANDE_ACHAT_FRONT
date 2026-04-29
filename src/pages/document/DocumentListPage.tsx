@@ -36,6 +36,34 @@ import {
 } from "@/services/documentService";
 import { Type_Validation_Document, TypeSage } from "@/types/besoin";
 
+const STYLES = `
+  .doc-page {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    background: #f4f6f9;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .doc-card {
+    flex: 1;
+    min-height: 0;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .doc-grid {
+    flex: 1;
+    min-height: 0;
+  }
+`;
+
 // Helpers
 const asRecord = (value: unknown): Record<string, unknown> =>
 	value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -384,7 +412,9 @@ export default function DocumentListPage({ tpNo: propTpNo }: DocumentListPagePro
 	};
 
 	return (
-		<Box sx={{ maxWidth: 1600, mx: "auto", p: 2 }}>
+		<>
+			<style>{STYLES}</style>
+			<div className="doc-page">
 			{/* Breadcrumb */}
 			<Box sx={{ mb: 2 }}>
 				<Typography variant="body2" color="text.secondary">
@@ -542,37 +572,44 @@ export default function DocumentListPage({ tpNo: propTpNo }: DocumentListPagePro
 			</Stack>
 
 			{/* Data Grid */}
-			<DataGrid
-				rows={documents}
-				columns={columns}
-				loading={loading}
-				pagination
-				pageSizeOptions={[5, 10, 50, 100]}
-				getRowId={(row) => row.eP_Numero}
-				initialState={{
-					pagination: {
-						paginationModel: { pageSize: filter.pageSize, page: filter.pageIndex - 1 },
-					},
-				}}
-				rowCount={total}
-				paginationMode="server"
-				onPaginationModelChange={(model) => {
-					setFilter((p) => ({
-						...p,
-						pageIndex: model.page + 1,
-						pageSize: model.pageSize,
-					}));
-				}}
-				onRowClick={({ row }) => setSelectedDoc(row as DocumentItem)}
-				rowSelectionModel={
-					selectedDoc ? { type: "include", ids: new Set([selectedDoc.eP_Numero]) } : { type: "include", ids: new Set() }
-				}
-				sx={{
-					"& .MuiDataGrid-row.Mui-selected": {
-						bgcolor: "action.selected",
-					},
-				}}
-			/>
-		</Box>
+			<div className="doc-card">
+				<Box className="doc-grid">
+					<DataGrid
+						rows={documents}
+						columns={columns}
+						loading={loading}
+						pagination
+						pageSizeOptions={[5, 10, 50, 100]}
+						getRowId={(row) => row.eP_Numero}
+						initialState={{
+							pagination: {
+								paginationModel: { pageSize: filter.pageSize, page: filter.pageIndex - 1 },
+							},
+						}}
+						rowCount={total}
+						paginationMode="server"
+						onPaginationModelChange={(model) => {
+							setFilter((p) => ({
+								...p,
+								pageIndex: model.page + 1,
+								pageSize: model.pageSize,
+							}));
+						}}
+						onRowClick={({ row }) => setSelectedDoc(row as DocumentItem)}
+						rowSelectionModel={
+							selectedDoc
+								? { type: "include", ids: new Set([selectedDoc.eP_Numero]) }
+								: { type: "include", ids: new Set() }
+						}
+						sx={{
+							"& .MuiDataGrid-row.Mui-selected": {
+								bgcolor: "action.selected",
+							},
+						}}
+					/>
+				</Box>
+			</div>
+			</div>
+		</>
 	);
 }
