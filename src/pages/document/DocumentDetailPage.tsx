@@ -6,6 +6,7 @@ import {
 	CloudUpload as CloudUploadIcon,
 	ContentCopy as CopyIcon,
 	Delete as DeleteIcon,
+	Info as InfoIcon,
 	OpenInNew as OpenInNewIcon,
 	Print as PrintIcon,
 	Save as SaveIcon,
@@ -43,9 +44,10 @@ import {
 } from "@mui/material";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import apiClient from "@/api/apiClient";
+import { verifierDemandeCloturer } from "@/services/besoinservice";
 import {
 	addOrUpdateLigneDocument,
 	annulerDocumentSage,
@@ -234,6 +236,7 @@ interface TaxLine {
 }
 
 export default function DocumentDetailPage() {
+	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const epNumero = searchParams.get("epNumero") || "";
 	const tpNo = Number(searchParams.get("tpNo")) || TypeSage.Demande_Achat;
@@ -246,6 +249,7 @@ export default function DocumentDetailPage() {
 	// Loading states
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
+	const [isTotallyClotured, setIsTotallyClotured] = useState(false);
 
 	// Document header state
 	const [document, setDocument] = useState<Record<string, unknown>>({});
@@ -317,11 +321,26 @@ export default function DocumentDetailPage() {
 	const isCloturer = epValiderAERP === Type_Validation_Document.Cloturer;
 	const isValiderSage = epValiderAERP === Type_Validation_Document.Valider_Sage;
 	const isAnnuler = epValiderAERP === Type_Validation_Document.Annuler;
-	const isEnCours =
-		epValiderAERP === Type_Validation_Document.Encours || epValiderAERP === Type_Validation_Document.Encours_Creation;
 	const docNumero = asString(getValue(document, "eP_Numero", "EP_Numero"));
 	const bNo = asNumber(getValue(document, "b_No", "B_No"));
 	const selectedLines = lines.slice(0, linePageSize);
+
+	useEffect(() => {
+		const checkIfTotallyClotured = async () => {
+			if (bNo && !isBC) {
+				try {
+					const result = await verifierDemandeCloturer(bNo, tpNo);
+					setIsTotallyClotured(!!result);
+				} catch (error) {
+					console.error("Error checking if totally clotured:", error);
+					setIsTotallyClotured(false);
+				}
+			} else {
+				setIsTotallyClotured(false);
+			}
+		};
+		void checkIfTotallyClotured();
+	}, [bNo, tpNo, isBC]);
 
 	// Load document data
 	const loadDocument = useCallback(async () => {
@@ -571,7 +590,14 @@ export default function DocumentDetailPage() {
 				typeValidation,
 			);
 			const resRecord = asRecord(res);
-			if (asBool(resRecord.isValid)) {
+			// Handle both new API (returns empty Ok or { totalementCloturer }) and old API (returns { isValid: true, ... })
+			if (
+				!res ||
+				asBool(resRecord.isValid) ||
+				asBool(resRecord.IsValid) ||
+				resRecord.totalementCloturer !== undefined ||
+				resRecord.TotalementCloturer !== undefined
+			) {
 				// Mettre à jour localement l'état du document
 				setDocument((prev) => ({
 					...prev,
@@ -585,15 +611,15 @@ export default function DocumentDetailPage() {
 				await loadDocument();
 
 				// Vérifier si totalement clôturé et proposer la redirection
-				if (asBool(resRecord.totalementCloturer)) {
+				if (asBool(resRecord.totalementCloturer) || asBool(resRecord.TotalementCloturer)) {
 					if (window.confirm("Cette demande a été totalement clôturée. Voulez-vous consulter le récap ?")) {
 						const bNoValue = asNumber(getValue(document, "b_No", "B_No"));
 						// Utiliser l'URL avec paramètres de recherche pour naviguer vers les détails
-						window.open(`/besoins?view=details&id=${bNoValue}&type=${tpNo}`, "_blank");
+						navigate(`/besoins?view=details&id=${bNoValue}`);
 					}
 				}
 			} else {
-				toast.error(asString(resRecord.Message));
+				toast.error(asString(resRecord.Message) || asString(resRecord.message));
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Erreur");
@@ -606,15 +632,15 @@ export default function DocumentDetailPage() {
 		try {
 			const res = await validerDocumentSage(asString(document.eP_Numero ?? document.EP_Numero), tpNo);
 			const resRecord = asRecord(res);
-			if (asBool(resRecord.isValid)) {
+			if (asBool(resRecord.isValid) || asBool(resRecord.IsValid)) {
 				toast.success("Document validé dans Sage");
 				setDocument((prev) => ({
 					...prev,
-					eP_NumeroSage: resRecord.eP_NumeroSage,
+					eP_NumeroSage: resRecord.eP_NumeroSage ?? resRecord.EP_NumeroSage,
 					eP_ValiderAERP: Type_Validation_Document.Valider_Sage,
 				}));
 			} else {
-				toast.error(asString(resRecord.Message));
+				toast.error(asString(resRecord.Message) || asString(resRecord.message));
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Erreur");
@@ -627,11 +653,11 @@ export default function DocumentDetailPage() {
 		try {
 			const res = await annulerDocumentSage(asString(document.eP_Numero ?? document.EP_Numero), tpNo);
 			const resRecord = asRecord(res);
-			if (asBool(resRecord.isValid)) {
+			if (asBool(resRecord.isValid) || asBool(resRecord.IsValid)) {
 				toast.success("Document annulé");
 				await loadDocument();
 			} else {
-				toast.error(asString(resRecord.Message));
+				toast.error(asString(resRecord.Message) || asString(resRecord.message));
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Erreur");
@@ -649,15 +675,15 @@ export default function DocumentDetailPage() {
 				gardeTrace,
 			);
 			const resRecord = asRecord(res);
-			if (asBool(resRecord.isValid)) {
-				if (!gardeTrace && asBool(resRecord.redirectToBC)) {
+			if (asBool(resRecord.isValid) || asBool(resRecord.IsValid)) {
+				if (!gardeTrace && (asBool(resRecord.redirectToBC) || asBool(resRecord.RedirectToBC))) {
 					window.location.href = "/document/bons-commande";
 				} else {
 					toast.success("Document transformé");
 					await loadDocument();
 				}
 			} else {
-				toast.error(asString(resRecord.Message));
+				toast.error(asString(resRecord.Message) || asString(resRecord.message));
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Erreur");
@@ -670,11 +696,11 @@ export default function DocumentDetailPage() {
 		try {
 			const res = await comptabiliserDocument(asString(document.eP_Numero ?? document.EP_Numero), tpNo);
 			const resRecord = asRecord(res);
-			if (asBool(resRecord.isValid)) {
+			if (asBool(resRecord.isValid) || asBool(resRecord.IsValid)) {
 				toast.success("Document comptabilisé");
-				setDocument((prev) => ({ ...prev, eP_Comptabiliser: 1 }));
+				setDocument((prev) => ({ ...prev, eP_Comptabiliser: 1, EP_Comptabiliser: 1 }));
 			} else {
-				toast.error(asString(resRecord.Message));
+				toast.error(asString(resRecord.Message) || asString(resRecord.message));
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Erreur");
@@ -916,6 +942,17 @@ export default function DocumentDetailPage() {
 					{permissions.imprimer && !isNew && (
 						<Button variant="contained" color="inherit" size="small" startIcon={<PrintIcon />} onClick={onPrint}>
 							Imprimer
+						</Button>
+					)}
+					{isTotallyClotured && (
+						<Button
+							variant="contained"
+							color="info"
+							size="small"
+							startIcon={<InfoIcon />}
+							onClick={() => navigate(`/besoins?view=details&id=${bNo}`)}
+						>
+							Consulter le récap
 						</Button>
 					)}
 					<Button variant="outlined" size="small" startIcon={<CloseIcon />} onClick={onClose}>

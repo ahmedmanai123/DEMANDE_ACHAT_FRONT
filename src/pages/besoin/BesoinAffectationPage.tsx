@@ -1,7 +1,14 @@
+import AttachFileIcon from "@mui/icons-material/AttachFile";
+import CancelIcon from "@mui/icons-material/Cancel";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import LockIcon from "@mui/icons-material/Lock";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import {
 	Accordion,
 	AccordionDetails,
@@ -26,7 +33,7 @@ import {
 	TableRow,
 	Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { toast } from "sonner";
 import { tiersService } from "@/api/services/tiersService";
 import {
@@ -87,7 +94,23 @@ const asNumber = (value: unknown): number => {
 
 const asString = (value: unknown): string => (typeof value === "string" ? value : String(value ?? ""));
 
-const asBool = (value: unknown): boolean => value === true || value === "true" || value === 1;
+const asBool = (value: unknown): boolean => {
+	if (value === true || value === 1) return true;
+	if (typeof value === "string") return value.toLowerCase() === "true" || value === "1";
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		const record = value as Record<string, unknown>;
+		return asBool(record.isValid ?? record.IsValid ?? record.value ?? record.Value);
+	}
+	return false;
+};
+
+const getAny = (source: Record<string, unknown>, ...keys: string[]): unknown => {
+	for (const key of keys) {
+		const value = source[key];
+		if (value !== undefined && value !== null && asString(value) !== "") return value;
+	}
+	return undefined;
+};
 
 const toFixedIfNumber = (value: unknown): string => {
 	const n = asNumber(value);
@@ -113,11 +136,7 @@ const getTiersLabel = (value: unknown): string => {
 };
 
 const getField = (source: Record<string, unknown>, ...keys: string[]): string => {
-	for (const key of keys) {
-		const value = source[key];
-		if (value !== undefined && value !== null && asString(value) !== "") return asString(value);
-	}
-	return "";
+	return asString(getAny(source, ...keys));
 };
 
 // TypeAffectation: Fournisseur=1, Document=2
@@ -139,6 +158,57 @@ function EtatChip({ etat }: { etat: number }) {
 	};
 	const cfg = map[etat] ?? { label: "Inconnu", color: "#333" };
 	return <Chip label={cfg.label} size="small" sx={{ bgcolor: cfg.color, color: "#fff", fontWeight: 600 }} />;
+}
+
+// ─── EtatRetourChip ───────────────────────────────────────────────────────────
+
+function EtatRetourChip({ etat }: { etat: number }) {
+	const map: Record<number, { label: string; color: string; icon: ReactElement }> = {
+		0: {
+			label: "Non effectué",
+			color: "#343a40",
+			icon: <HourglassEmptyIcon fontSize="small" />,
+		},
+		1: {
+			label: "En cours",
+			color: "#ffc107",
+			icon: <ScheduleIcon fontSize="small" />,
+		},
+		2: {
+			label: "En attente validation acheteur",
+			color: "#17a2b8",
+			icon: <VerifiedUserIcon fontSize="small" />,
+		},
+		3: {
+			label: "Validée",
+			color: "#28a745",
+			icon: <CheckCircleIcon fontSize="small" />,
+		},
+		4: {
+			label: "Refusée",
+			color: "#dc3545",
+			icon: <CancelIcon fontSize="small" />,
+		},
+		5: {
+			label: "Achetée",
+			color: "#007bff",
+			icon: <ShoppingCartIcon fontSize="small" />,
+		},
+	};
+	const cfg = map[etat] ?? { label: "Inconnu", color: "#666", icon: undefined };
+	return (
+		<Chip
+			label={cfg.label}
+			size="small"
+			icon={cfg.icon}
+			sx={{
+				bgcolor: cfg.color,
+				color: "#fff",
+				fontWeight: 500,
+				"& .MuiChip-icon": { color: "#fff" },
+			}}
+		/>
+	);
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
@@ -190,12 +260,12 @@ export default function BesoinAffectationPage({
 	// ── Valeurs dérivées ───────────────────────────────────────────────────────
 
 	const demande = asRecord(details.demande);
-	const etatAffectation = asNumber(demande.B_Etat_Affectation_Acheteur);
-	const adTypeDemande = asNumber(demande.AD_TypeDemande);
+	const etatAffectation = asNumber(getAny(demande, "B_Etat_Affectation_Acheteur", "b_Etat_Affectation_Acheteur"));
+	const adTypeDemande = asNumber(getAny(demande, "AD_TypeDemande", "aD_TypeDemande"));
 	const bNumero = getField(demande, "B_Numero", "b_Numero") || getField(besoin, "B_Numero", "b_Numero");
 	// Récupérer tpNo depuis les données de la demande pour s'assurer qu'est correct
 	const actualTpNo =
-		asNumber(demande.B_TypeDocument ?? demande.b_TypeDocument ?? demande.TP_No ?? demande.tP_No) || tpNo;
+		asNumber(getAny(demande, "B_TypeDocument", "b_TypeDocument", "TP_No", "tP_No")) || tpNo;
 	const detailFields = [
 		{ label: "Titre", value: getField(demande, "B_Titre", "b_Titre") || getField(besoin, "B_Titre", "b_Titre") },
 		{ label: "Date", value: getField(demande, "B_Date", "b_Date") || getField(besoin, "B_Date", "b_Date") },
@@ -204,12 +274,14 @@ export default function BesoinAffectationPage({
 		{ label: "Type document", value: actualTpNo === TypeSage.BC_Achat ? "Bon de commande achat" : "Demande de prix" },
 	];
 
-	const existDemandeGenerer = asBool(details.exist_Demande_Generer);
-	const lieeDemandeGenerer = asBool(details.liee_Demande_Generer);
-	const isParticelAffection = asBool(details.isParticelaffection);
-	const vId = asNumber(details.v_Id);
-	const vAcheteur = asBool(details.v_Acheteur);
-	const disabledAff = asBool(details.Disabled_Aff);
+	const existDemandeGenerer = asBool(getAny(details, "exist_Demande_Generer", "Exist_Demande_Generer"));
+	const lieeDemandeGenerer = asBool(getAny(details, "liee_Demande_Generer", "Liee_Demande_Generer"));
+	const isParticelAffection = asBool(
+		getAny(details, "isParticelaffection", "isParticelaffectionDemandeRetour", "IsParticelaffectionDemandeRetour"),
+	);
+	const vId = asNumber(getAny(details, "v_Id", "V_Id"));
+	const vAcheteur = asBool(getAny(details, "v_Acheteur", "V_Acheteur"));
+	const disabledAff = asBool(getAny(details, "Disabled_Aff", "disabled_Aff"));
 
 	const isRetourDemande = adTypeDemande === Type_Validation.Retour_Demande_Validation;
 	const isAcheter = etatAffectation === ETAT_ACHETER;
@@ -317,7 +389,7 @@ export default function BesoinAffectationPage({
 			// Historique — read current filter without adding it to deps
 			setHistoriqueFilter((currentFilter) => {
 				void getHistoriqueValidation(
-					{ ...currentFilter, B_No: besoinId, BT_Id: asNumber(bR.BT_Id) } as never,
+					{ ...currentFilter, B_No: besoinId, BT_Id: asNumber(getAny(bR, "BT_Id", "bT_Id")) } as never,
 					currentFilter.V_Type,
 				).then((hist) => {
 					setHistoriqueRows(
@@ -365,15 +437,26 @@ export default function BesoinAffectationPage({
 			setRetourRowsByArticle(retourMap);
 
 			// EtatViewRetour
-			const _etatAff = asNumber(asRecord(dR.demande).B_Etat_Affectation_Acheteur);
-			const _etatRetour = asNumber(asRecord(dR.demande).B_EtatRetour);
-			const _vAcheteur = asBool(dR.v_Acheteur);
+			const demandeDetails = asRecord(getAny(dR, "demande", "Demande"));
+			const _etatAff = asNumber(getAny(demandeDetails, "B_Etat_Affectation_Acheteur", "b_Etat_Affectation_Acheteur"));
+			const _etatRetour = asNumber(getAny(demandeDetails, "B_EtatRetour", "b_EtatRetour"));
+			const _vAcheteur = asBool(getAny(dR, "v_Acheteur", "V_Acheteur"));
+			const clotureFromDetails = getAny(
+				dR,
+				"verifier_Demande_Totalement_Cloturer",
+				"Verifier_Demande_Totalement_Cloturer",
+				"verifierDemandeTotalementCloturer",
+				"VerifierDemandeTotalementCloturer",
+			);
 
 			if (_etatAff !== ETAT_ACHETER && _etatRetour === 0 && _vAcheteur) {
 				try {
-					const cloturer = await verifierDemandeCloturer(besoinId, TypeSage.Demande_Achat);
+					const cloturer =
+						clotureFromDetails === undefined
+							? await verifierDemandeCloturer(besoinId, actualTpNo)
+							: asBool(clotureFromDetails);
 					if (asBool(cloturer) && _etatAff !== 0) {
-						const affichier = await affichieraffectionDemande(besoinId, asNumber(bR.BT_Id), actualTpNo);
+						const affichier = await affichieraffectionDemande(besoinId, asNumber(getAny(bR, "BT_Id", "bT_Id")), actualTpNo);
 						setShowValidationRetour(asBool(affichier));
 					} else {
 						setShowValidationRetour(false);
@@ -723,13 +806,14 @@ export default function BesoinAffectationPage({
 													<TableCell align="right">Qté demandée</TableCell>
 													<TableCell align="right">Qté</TableCell>
 													<TableCell>N° doc. généré</TableCell>
+													<TableCell align="center">Pièces jointes</TableCell>
 													<TableCell>État retour</TableCell>
 												</TableRow>
 											</TableHead>
 											<TableBody>
 												{rows.length === 0 && (
 													<TableRow>
-														<TableCell colSpan={7} align="center">
+														<TableCell colSpan={8} align="center">
 															Aucune ligne
 														</TableCell>
 													</TableRow>
@@ -738,32 +822,68 @@ export default function BesoinAffectationPage({
 													const adNo = asNumber(row.AD_No ?? row.aD_No);
 													const isSelected =
 														asNumber(selectedRetourRows[baNo]?.AD_No ?? selectedRetourRows[baNo]?.aD_No) === adNo;
+													const hasAttachments = asNumber(row.LP_NbAttachement ?? row.lP_NbAttachement) > 0;
+													const hasRejet =
+														asString(row.AD_Motif ?? row.aD_Motif) &&
+														asNumber(row.AD_IDValidateurRejetArticle ?? row.aD_IDValidateurRejetArticle);
 													return (
-														<TableRow key={adNo || rowIdx} selected={isSelected}>
-															<TableCell padding="checkbox">
-																<IconButton
-																	size="small"
-																	onClick={() =>
-																		setSelectedRetourRows((prev) => ({
-																			...prev,
-																			[baNo]: isSelected ? ({} as Record<string, unknown>) : row,
-																		}))
-																	}
-																>
-																	{isSelected ? "●" : "○"}
-																</IconButton>
-															</TableCell>
-															<TableCell>{asString(row.AD_Fournisseur ?? row.aD_Fournisseur)}</TableCell>
-															<TableCell>{asString(row.AR_Article ?? row.aR_Article)}</TableCell>
-															<TableCell align="right">
-																{toFixedIfNumber(row.AR_QteDemande ?? row.aR_QteDemande)}
-															</TableCell>
-															<TableCell align="right">{toFixedIfNumber(row.LP_QteMvt ?? row.lP_QteMvt)}</TableCell>
-															<TableCell>
-																{asString(row.LP_NumDocument_Generer ?? row.lP_NumDocument_Generer)}
-															</TableCell>
-															<TableCell>{asNumber(row.AD_EtatRetour ?? row.aD_EtatRetour)}</TableCell>
-														</TableRow>
+														<>
+															<TableRow key={adNo || rowIdx} selected={isSelected}>
+																<TableCell padding="checkbox">
+																	<IconButton
+																		size="small"
+																		onClick={() =>
+																			setSelectedRetourRows((prev) => ({
+																				...prev,
+																				[baNo]: isSelected ? ({} as Record<string, unknown>) : row,
+																			}))
+																		}
+																	>
+																		{isSelected ? "●" : "○"}
+																	</IconButton>
+																</TableCell>
+																<TableCell>{asString(row.AD_Fournisseur ?? row.aD_Fournisseur)}</TableCell>
+																<TableCell>{asString(row.AR_Article ?? row.aR_Article)}</TableCell>
+																<TableCell align="right">
+																	{toFixedIfNumber(row.AR_QteDemande ?? row.aR_QteDemande)}
+																</TableCell>
+																<TableCell align="right">{toFixedIfNumber(row.LP_QteMvt ?? row.lP_QteMvt)}</TableCell>
+																<TableCell>
+																	{asString(row.LP_NumDocument_Generer ?? row.lP_NumDocument_Generer)}
+																</TableCell>
+																<TableCell align="center">
+																	{hasAttachments && (
+																		<IconButton
+																			size="small"
+																			color="info"
+																			title="Pièces jointes"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				// TODO: Ouvrir la popup des pièces jointes
+																				toast.info("Pièces jointes : Fonctionnalité à implémenter");
+																			}}
+																		>
+																			<AttachFileIcon fontSize="small" />
+																		</IconButton>
+																	)}
+																</TableCell>
+																<TableCell>
+																	<EtatRetourChip etat={asNumber(row.AD_EtatRetour ?? row.aD_EtatRetour)} />
+																</TableCell>
+															</TableRow>
+															{hasRejet && (
+																<TableRow>
+																	<TableCell colSpan={8}>
+																		<Alert severity="error" sx={{ mt: 1, mb: 1 }}>
+																			<strong>Article rejeté par :</strong>{" "}
+																			{asString(row.AD_NomValidateurRejetArticle ?? row.aD_NomValidateurRejetArticle)}
+																			<br />
+																			<strong>Motif :</strong> {asString(row.AD_Motif ?? row.aD_Motif)}
+																		</Alert>
+																	</TableCell>
+																</TableRow>
+															)}
+														</>
 													);
 												})}
 											</TableBody>

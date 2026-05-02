@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
 		server: {
 			open: true,
 			host: true,
-			port: 3001,
+			port: 3002,
 			proxy: {
 				"/api": {
 					target: "https://localhost:7233",
