@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import CancelIcon from "@mui/icons-material/Cancel";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -19,6 +20,7 @@ import {
 	Chip,
 	CircularProgress,
 	FormControl,
+	Grid,
 	IconButton,
 	InputLabel,
 	MenuItem,
@@ -31,9 +33,10 @@ import {
 	TableContainer,
 	TableHead,
 	TableRow,
+	TextField,
 	Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { type ReactElement, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { tiersService } from "@/api/services/tiersService";
 import {
@@ -243,6 +246,7 @@ export default function BesoinAffectationPage({
 		V_Role_Validateur: -1,
 	});
 	const [comparatifColumns, setComparatifColumns] = useState<string[]>([]);
+	const [comparatifVisibleKeys, setComparatifVisibleKeys] = useState<string[]>([]);
 	const [comparatifRows, setComparatifRows] = useState<Record<string, unknown>[]>([]);
 	const [showValidationRetour, setShowValidationRetour] = useState(false);
 
@@ -264,8 +268,7 @@ export default function BesoinAffectationPage({
 	const adTypeDemande = asNumber(getAny(demande, "AD_TypeDemande", "aD_TypeDemande"));
 	const bNumero = getField(demande, "B_Numero", "b_Numero") || getField(besoin, "B_Numero", "b_Numero");
 	// Récupérer tpNo depuis les données de la demande pour s'assurer qu'est correct
-	const actualTpNo =
-		asNumber(getAny(demande, "B_TypeDocument", "b_TypeDocument", "TP_No", "tP_No")) || tpNo;
+	const actualTpNo = asNumber(getAny(demande, "B_TypeDocument", "b_TypeDocument", "TP_No", "tP_No")) || tpNo;
 	const detailFields = [
 		{ label: "Titre", value: getField(demande, "B_Titre", "b_Titre") || getField(besoin, "B_Titre", "b_Titre") },
 		{ label: "Date", value: getField(demande, "B_Date", "b_Date") || getField(besoin, "B_Date", "b_Date") },
@@ -360,7 +363,8 @@ export default function BesoinAffectationPage({
 
 	// ── loadAll ────────────────────────────────────────────────────────────────
 
-	const loadAll = useCallback(async (): Promise<void> => {
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+		const loadAll = useCallback(async (): Promise<void> => {
 		setLoading(true);
 		try {
 			const [d, b, a, aff, tiersResponse] = await Promise.all([
@@ -404,18 +408,47 @@ export default function BesoinAffectationPage({
 			const compRecord = asRecord(comp);
 			const compRows = Array.isArray(compRecord.dataArray) ? (compRecord.dataArray as unknown[][]) : [];
 			if (compRows.length > 0) {
-				const cols = compRows[0].map((_, i) => `col_${i}`);
-				setComparatifColumns(cols);
-				setComparatifRows(
-					compRows.map((r) => {
-						const obj: Record<string, unknown> = {};
-						cols.forEach((c, i) => {
-							obj[c] = r[i];
-						});
-						return obj;
-					}),
+				const allColumnNames = compRows[0].map((col) => asString(col));
+				const posMoinsDisantIndex = allColumnNames.findIndex(
+					(col) => col.toLowerCase().includes("pos_moins") || col.toLowerCase().includes("moins"),
 				);
+				const posPlusCherIndex = allColumnNames.findIndex(
+					(col) => col.toLowerCase().includes("pos_plus") || col.toLowerCase().includes("plus"),
+				);
+
+				const visibleColumnNames = allColumnNames.filter(
+					(_, idx) => idx !== posMoinsDisantIndex && idx !== posPlusCherIndex,
+				);
+
+				const displayColumnNames = visibleColumnNames.map((col) => {
+					const fournisseur = fournisseurs.find((f) => asString((f as unknown as Record<string, unknown>).CT_Num) === col);
+					if (fournisseur) {
+						const ctIntitule = asString((fournisseur as unknown as Record<string, unknown>).CT_Intitule);
+						return `${col} | ${ctIntitule}`;
+					}
+					return col;
+				});
+
+				const dataRowsWithMetadata = compRows.slice(1).map((row) => {
+					const obj: Record<string, unknown> = {};
+					visibleColumnNames.forEach((col, i) => {
+						const originalIndex = allColumnNames.indexOf(col);
+						obj[col] = row[originalIndex];
+					});
+					if (posMoinsDisantIndex !== -1) {
+						obj._posMoinsDisant = asNumber(row[posMoinsDisantIndex]);
+					}
+					if (posPlusCherIndex !== -1) {
+						obj._posPlusCher = asNumber(row[posPlusCherIndex]);
+					}
+					return obj;
+				});
+
+				setComparatifVisibleKeys(visibleColumnNames);
+				setComparatifColumns(displayColumnNames);
+				setComparatifRows(dataRowsWithMetadata);
 			} else {
+				setComparatifVisibleKeys([]);
 				setComparatifColumns([]);
 				setComparatifRows([]);
 			}
@@ -456,7 +489,11 @@ export default function BesoinAffectationPage({
 							? await verifierDemandeCloturer(besoinId, actualTpNo)
 							: asBool(clotureFromDetails);
 					if (asBool(cloturer) && _etatAff !== 0) {
-						const affichier = await affichieraffectionDemande(besoinId, asNumber(getAny(bR, "BT_Id", "bT_Id")), actualTpNo);
+						const affichier = await affichieraffectionDemande(
+							besoinId,
+							asNumber(getAny(bR, "BT_Id", "bT_Id")),
+							actualTpNo,
+						);
 						setShowValidationRetour(asBool(affichier));
 					} else {
 						setShowValidationRetour(false);
@@ -741,33 +778,27 @@ export default function BesoinAffectationPage({
 				</Stack>
 			</Stack>
 
-			<Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
-				<Typography variant="subtitle1" sx={{ color: "primary.main", fontWeight: 600, mb: 1.5 }}>
-					Details de la demande
-				</Typography>
-				<Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ flexWrap: "wrap" }}>
-					<Stack sx={{ minWidth: 180 }}>
-						<Typography variant="caption" color="text.secondary">
-							N demande
-						</Typography>
-						<Typography variant="body2">{bNumero || "-"}</Typography>
-					</Stack>
-					{detailFields.map((field) => (
-						<Stack key={field.label} sx={{ minWidth: 180 }}>
-							<Typography variant="caption" color="text.secondary">
-								{field.label}
-							</Typography>
-							<Typography variant="body2">{field.value || "-"}</Typography>
-						</Stack>
-					))}
-				</Stack>
-			</Paper>
-
 			{lieeDemandeGenerer && (
 				<Alert severity="info" sx={{ mb: 2 }}>
 					Des documents sont déjà générés pour cette demande. La table d'affectation reste consultable.
 				</Alert>
 			)}
+
+			<Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
+				<Typography variant="subtitle1" sx={{ color: "primary.main", fontWeight: 600, mb: 1.5 }}>
+					Details de la demande
+				</Typography>
+				<Grid container spacing={2} sx={{ flexWrap: "wrap" }}>
+					<Grid size={{ xs: 12, md: 4 }}>
+						<TextField size="small" fullWidth label="N° de demande" value={bNumero || "-"} disabled />
+					</Grid>
+					{detailFields.map((field) => (
+						<Grid key={field.label} size={{ xs: 12, md: 4 }}>
+							<TextField size="small" fullWidth label={field.label} value={field.value || "-"} disabled />
+						</Grid>
+					))}
+				</Grid>
+			</Paper>
 
 			{/* Section Validation retour */}
 			{showValidationRetour && (
@@ -1213,44 +1244,139 @@ export default function BesoinAffectationPage({
 
 			{/* Tableaux comparatifs - logique MVC: afficher si lieeDemandeGenerer OU si showHistorique */}
 			{(lieeDemandeGenerer || showHistorique) && (
-				<Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
-					<Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mb: 2 }}>
-						<Typography variant="subtitle1" sx={{ color: "primary.main", fontWeight: 600 }}>
-							Tableaux Comparatifs
-						</Typography>
-						<Button
-							variant="outlined"
-							size="small"
-							onClick={() => void exportTableauxComparatifsExcel(besoinId, bNumero)}
+				<Paper variant="outlined" sx={{ mb: 2 }}>
+					<Box
+						sx={{
+							borderBottom: "2px solid #1976d2",
+							pb: 1,
+							px: 2,
+							pt: 2,
+						}}
+					>
+						<Typography
+							variant="subtitle1"
+							sx={{
+								color: "#1976d2",
+								fontWeight: 700,
+								textTransform: "uppercase",
+							}}
 						>
-							Exporter Excel
-						</Button>
-					</Stack>
-					{comparatifRows.length === 0 ? (
-						<Alert severity="info">Aucun tableau comparatif disponible.</Alert>
-					) : (
-						<TableContainer component={Paper} variant="outlined">
-							<Table size="small">
-								<TableHead>
-									<TableRow>
-										{comparatifColumns.map((c) => (
-											<TableCell key={c}>{c}</TableCell>
-										))}
-									</TableRow>
-								</TableHead>
-								<TableBody>
-									{comparatifRows.map((r, rIdx) => (
-										// biome-ignore lint/suspicious/noArrayIndexKey: dynamic columns without stable id
-										<TableRow key={rIdx}>
-											{comparatifColumns.map((c) => (
-												<TableCell key={c}>{asString(r[c])}</TableCell>
-											))}
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-						</TableContainer>
-					)}
+							Tableaux Comparatif
+						</Typography>
+					</Box>
+					<Box sx={{ p: 2 }}>
+						<Stack
+							direction="row"
+							sx={{
+								alignItems: "center",
+								justifyContent: "space-between",
+								mb: 2,
+							}}
+						>
+							<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+								Détails des prix
+							</Typography>
+							<Button
+								variant="contained"
+								size="small"
+								onClick={() => void exportTableauxComparatifsExcel(besoinId, bNumero)}
+								startIcon={<OpenInNewIcon />}
+							>
+								Exporter
+							</Button>
+						</Stack>
+						{comparatifRows.length === 0 ? (
+							<Alert severity="info" sx={{ borderRadius: 1 }}>
+								Aucun tableau comparatif disponible.
+							</Alert>
+						) : (
+							<>
+								<TableContainer component={Paper} elevation={1} sx={{ borderRadius: 1, mb: 2 }}>
+									<Table size="small" stickyHeader>
+										<TableHead sx={{ backgroundColor: "#f5f5f5" }}>
+											<TableRow>
+												{comparatifColumns.map((c, idx) => (
+													<TableCell
+														key={c}
+														sx={{
+															fontWeight: 700,
+															borderBottom: "2px solid #e0e0e0",
+															textAlign: idx === 0 ? "left" : "center",
+														}}
+													>
+														{c}
+													</TableCell>
+												))}
+											</TableRow>
+										</TableHead>
+										<TableBody>
+											{comparatifRows.map((r, rIdx) => {
+												const posMoinsDisant = asNumber(r._posMoinsDisant);
+												const posPlusCher = asNumber(r._posPlusCher);
+												return (
+													// biome-ignore lint/suspicious/noArrayIndexKey: dynamic columns without stable id
+													<TableRow
+														key={rIdx}
+														hover
+														sx={{
+															"&:nth-of-type(odd)": { backgroundColor: "#fafafa" },
+														}}
+													>
+														{comparatifVisibleKeys.map((key, cIdx) => {
+															const value = asString(r[key]);
+															const displayName = comparatifColumns[cIdx];
+															let bgColor = "inherit";
+
+															if (cIdx > 0) {
+																if (posMoinsDisant !== -1 && cIdx === posMoinsDisant - 1) {
+																	bgColor = "#c8e6c9";
+																} else if (posPlusCher !== -1 && cIdx === posPlusCher - 1) {
+																	bgColor = "#ffcdd2";
+																}
+															}
+
+															return (
+																<TableCell
+																	key={key}
+																	sx={{
+																		backgroundColor: bgColor,
+																		textAlign: cIdx === 0 ? "left" : "center",
+																		fontWeight: cIdx === 0 ? 500 : "normal",
+																	}}
+																>
+																	{value}
+																</TableCell>
+															);
+														})}
+													</TableRow>
+												);
+											})}
+										</TableBody>
+									</Table>
+								</TableContainer>
+								<Stack direction="row" spacing={1}>
+									<Chip
+										label="Moins-disant"
+										sx={{
+											backgroundColor: "#c8e6c9",
+											color: "#2e7d32",
+											fontWeight: 600,
+											border: "1px solid #a5d6a7",
+										}}
+									/>
+									<Chip
+										label="Plus-cher"
+										sx={{
+											backgroundColor: "#ffcdd2",
+											color: "#c62828",
+											fontWeight: 600,
+											border: "1px solid #ef9a9a",
+										}}
+									/>
+								</Stack>
+							</>
+						)}
+					</Box>
 				</Paper>
 			)}
 

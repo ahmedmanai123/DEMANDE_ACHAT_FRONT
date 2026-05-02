@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/correctness/useExhaustiveDependencies: <explanation> */
 import {
 	Add as AddIcon,
 	AttachFile as AttachFileIcon,
