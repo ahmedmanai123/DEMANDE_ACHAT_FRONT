@@ -95,6 +95,9 @@ interface DocumentItem {
 	lP_No: number;
 }
 
+const getDocumentRowId = (row: DocumentItem) =>
+	[row.eP_Numero, row.tP_No, row.lP_No, row.eP_NumeroSage || row.eP_Date].filter((part) => part !== undefined && part !== null).join("-");
+
 interface FilterState {
 	pageSize: number;
 	pageIndex: number;
@@ -186,11 +189,6 @@ export default function DocumentListPage({ tpNo: propTpNo }: DocumentListPagePro
 			return;
 		}
 		navigate(`/document/details?epNumero=${selectedDoc.eP_Numero}&tpNo=${selectedDoc.tP_No}`);
-	};
-
-	const onOpenInNewTab = () => {
-		if (!selectedDoc) return;
-		window.open(`/document/details?epNumero=${selectedDoc.eP_Numero}&tpNo=${selectedDoc.tP_No}`, "_blank");
 	};
 
 	const onValiderSage = async () => {
@@ -580,7 +578,7 @@ export default function DocumentListPage({ tpNo: propTpNo }: DocumentListPagePro
 						loading={loading}
 						pagination
 						pageSizeOptions={[5, 10, 50, 100]}
-						getRowId={(row) => row.eP_Numero}
+						getRowId={getDocumentRowId}
 						initialState={{
 							pagination: {
 								paginationModel: { pageSize: filter.pageSize, page: filter.pageIndex - 1 },
@@ -598,7 +596,7 @@ export default function DocumentListPage({ tpNo: propTpNo }: DocumentListPagePro
 						onRowClick={({ row }) => setSelectedDoc(row as DocumentItem)}
 						rowSelectionModel={
 							selectedDoc
-								? { type: "include", ids: new Set([selectedDoc.eP_Numero]) }
+								? { type: "include", ids: new Set([getDocumentRowId(selectedDoc)]) }
 								: { type: "include", ids: new Set() }
 						}
 						sx={{

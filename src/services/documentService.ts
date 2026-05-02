@@ -11,8 +11,14 @@ const getErrorMessage = (error: unknown): string => {
 	const axiosError = error as AxiosError;
 	if (typeof axiosError.response?.data === "string" && axiosError.response.data.trim()) return axiosError.response.data;
 	const payload = toRecord(axiosError.response?.data);
-	const message = payload.message ?? payload.Message;
+	const message = payload.message ?? payload.Message ?? payload.title ?? payload.detail;
 	if (typeof message === "string" && message.trim()) return message;
+	if (payload.errors && typeof payload.errors === "object") {
+		const errors = Object.values(payload.errors as Record<string, unknown>)
+			.flatMap((value) => (Array.isArray(value) ? value : [value]))
+			.filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+		if (errors.length > 0) return errors.join(" ");
+	}
 	return axiosError.message || "Erreur serveur.";
 };
 

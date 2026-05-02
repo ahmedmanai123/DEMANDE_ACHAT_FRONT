@@ -5,13 +5,14 @@ import BesoinForm from "@/pages/besoin/BesoinForm";
 import BesoinGestionDemandesPage from "@/pages/besoin/BesoinGestionDemandesPage";
 import BesoinList from "@/pages/besoin/BesoinList";
 import BesoinValidationPage from "@/pages/besoin/BesoinValidationPage";
+import { TypeSage } from "@/types/besoin";
 
 export default function BesoinPage() {
 	const params = new URLSearchParams(window.location.search);
 	const mode = params.get("mode");
 	const affectationId = Number(params.get("id") || 0);
 	const validationBesoinId = Number(params.get("b_No") || 0);
-	const affectationType = Number(params.get("type") || 1);
+	const affectationType = Number(params.get("type") || TypeSage.Demande_Achat);
 	const [view, setView] = useState<"list" | "form">("list");
 	const [editId, setEditId] = useState<number>(0);
 

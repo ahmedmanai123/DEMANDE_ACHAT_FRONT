@@ -184,6 +184,7 @@ export default function BesoinAffectationPage({
 		aD_NoDocument_Affectation: 0,
 		aD_NoOrigine: 0,
 		aD_NoListDoc: 0,
+		listLignePiece: 0,
 	});
 
 	// ── Valeurs dérivées ───────────────────────────────────────────────────────
@@ -192,12 +193,15 @@ export default function BesoinAffectationPage({
 	const etatAffectation = asNumber(demande.B_Etat_Affectation_Acheteur);
 	const adTypeDemande = asNumber(demande.AD_TypeDemande);
 	const bNumero = getField(demande, "B_Numero", "b_Numero") || getField(besoin, "B_Numero", "b_Numero");
+	// Récupérer tpNo depuis les données de la demande pour s'assurer qu'est correct
+	const actualTpNo =
+		asNumber(demande.B_TypeDocument ?? demande.b_TypeDocument ?? demande.TP_No ?? demande.tP_No) || tpNo;
 	const detailFields = [
 		{ label: "Titre", value: getField(demande, "B_Titre", "b_Titre") || getField(besoin, "B_Titre", "b_Titre") },
 		{ label: "Date", value: getField(demande, "B_Date", "b_Date") || getField(besoin, "B_Date", "b_Date") },
 		{ label: "Demandeur", value: getField(demande, "D_Intitule", "d_Intitule", "Demandeur", "demandeur") },
 		{ label: "Depot", value: getField(demande, "DE_Intitule", "dE_Intitule", "Depot", "depot") },
-		{ label: "Type document", value: tpNo === TypeSage.BC_Achat ? "Bon de commande achat" : "Demande de prix" },
+		{ label: "Type document", value: actualTpNo === TypeSage.BC_Achat ? "Bon de commande achat" : "Demande de prix" },
 	];
 
 	const existDemandeGenerer = asBool(details.exist_Demande_Generer);
@@ -205,22 +209,34 @@ export default function BesoinAffectationPage({
 	const isParticelAffection = asBool(details.isParticelaffection);
 	const vId = asNumber(details.v_Id);
 	const vAcheteur = asBool(details.v_Acheteur);
+	const disabledAff = asBool(details.Disabled_Aff);
 
 	const isRetourDemande = adTypeDemande === Type_Validation.Retour_Demande_Validation;
 	const isAcheter = etatAffectation === ETAT_ACHETER;
 	const isGenereOuPlus = etatAffectation >= ETAT_GENERE;
 
-	// changerEtatAffectation() logic
+	// changerEtatAffectation() logic - correspond à la logique MVC
 	const { showFormButtons, showHistorique, formDisabled } = useMemo(() => {
-		if (isAcheter) return { showFormButtons: false, showHistorique: true, formDisabled: true };
-		if (isGenereOuPlus) return { showFormButtons: true, showHistorique: true, formDisabled: false };
+		if (isAcheter) {
+			return { showFormButtons: false, showHistorique: true, formDisabled: true };
+		}
+		if (isGenereOuPlus) {
+			// Si Disabled_Aff est True ou état >= Generer_Demande
+			if (disabledAff || etatAffectation >= ETAT_GENERE) {
+				if (isAcheter) {
+					return { showFormButtons: false, showHistorique: true, formDisabled: true };
+				}
+				return { showFormButtons: true, showHistorique: true, formDisabled: false };
+			}
+		}
 		return { showFormButtons: true, showHistorique: false, formDisabled: false };
-	}, [isAcheter, isGenereOuPlus]);
+	}, [isAcheter, isGenereOuPlus, disabledAff, etatAffectation]);
 
 	const showFournisseur = !isRetourDemande && form.aD_TypeAffectation === TypeAffectation.Fournisseur;
 	const showDocument = !isRetourDemande && form.aD_TypeAffectation === TypeAffectation.Document;
 	const isRetourSansPartiel = isRetourDemande && !isParticelAffection;
 	const showColonnesDocument = existDemandeGenerer && !isRetourDemande;
+	const showListLignePiece = !isRetourSansPartiel; // Afficher dans le mode normal
 
 	const showDivDemande = !showValidationRetour;
 	const showBtnCommande = showValidationRetour && canGenererBC;
@@ -228,6 +244,11 @@ export default function BesoinAffectationPage({
 	const showCrudButtons = showFormButtons && !showValidationRetour;
 	const showBtnGenerer = !isRetourSansPartiel && showFormButtons && !isAcheter;
 	const showBtnValider = showFormButtons && !isAcheter;
+
+	// Logique MVC pour l'affichage des boutons CRUD selon permissions
+	const showBtnNouveau = showCrudButtons && canCreate;
+	const showBtnEnregistrer = showCrudButtons && canCreate;
+	const showBtnSupprimer = showCrudButtons && canDelete;
 	const fournisseurOptions = useMemo(() => {
 		const options = fournisseurs
 			.map((fournisseur) => ({ value: getTiersNum(fournisseur), text: getTiersLabel(fournisseur) }))
@@ -242,20 +263,28 @@ export default function BesoinAffectationPage({
 
 	// ── loadDocsForAffectation ─────────────────────────────────────────────────
 
-	const loadDocsForAffectation = useCallback(async (aD_No: number): Promise<void> => {
-		if (!aD_No) {
-			setDocs([]);
-			return;
-		}
-		try {
-			const epTiers = await getTiersDocumentsNonValider(aD_No);
-			const rows = (await getDocumentsNonValider(TypeSage.BC_Achat, epTiers)) as Array<Record<string, unknown>>;
-			setDocs((rows ?? []).map((r) => ({ value: asString(r.Value), text: asString(r.Text) })));
-			setForm((prev) => ({ ...prev, eP_Tiers: epTiers }));
-		} catch {
-			setDocs([]);
-		}
-	}, []);
+	const loadDocsForAffectation = useCallback(
+		async (aD_No: number): Promise<void> => {
+			if (!aD_No) {
+				setDocs([]);
+				return;
+			}
+			try {
+				const epTiers = await getTiersDocumentsNonValider(aD_No);
+				const rows = (await getDocumentsNonValider(actualTpNo, epTiers)) as Array<Record<string, unknown>>;
+				setDocs(
+					(rows ?? []).map((r) => ({
+						value: asString(r.Value ?? r.value ?? r.LP_No ?? r.lP_No),
+						text: asString(r.Text ?? r.text ?? r.LP_NumDocument ?? r.lP_NumDocument ?? r.Document ?? r.document),
+					})),
+				);
+				setForm((prev) => ({ ...prev, eP_Tiers: epTiers }));
+			} catch {
+				setDocs([]);
+			}
+		},
+		[actualTpNo],
+	);
 
 	// ── loadAll ────────────────────────────────────────────────────────────────
 
@@ -266,7 +295,7 @@ export default function BesoinAffectationPage({
 				getDetailsDemandeAAcheter(besoinId),
 				getBesoinById(besoinId),
 				getBesoinArticles(besoinId),
-				getAffectationDetails({ B_No: besoinId, TP_No: tpNo }),
+				getAffectationDetails({ B_No: besoinId, TP_No: actualTpNo }),
 				tiersService
 					.getTiers({ CT_Type: 1, CT_Sommeil: 0, pageIndex: 1, pageSize: 500 })
 					.catch(() => ({ data: [] as F_COMPTETDto[], total: 0, pageIndex: 1, pageSize: 500, totalPages: 0 })),
@@ -344,7 +373,7 @@ export default function BesoinAffectationPage({
 				try {
 					const cloturer = await verifierDemandeCloturer(besoinId, TypeSage.Demande_Achat);
 					if (asBool(cloturer) && _etatAff !== 0) {
-						const affichier = await affichieraffectionDemande(besoinId, asNumber(bR.BT_Id), tpNo);
+						const affichier = await affichieraffectionDemande(besoinId, asNumber(bR.BT_Id), actualTpNo);
 						setShowValidationRetour(asBool(affichier));
 					} else {
 						setShowValidationRetour(false);
@@ -360,7 +389,7 @@ export default function BesoinAffectationPage({
 		} finally {
 			setLoading(false);
 		}
-	}, [besoinId, tpNo]);
+	}, [besoinId, actualTpNo]);
 
 	useEffect(() => {
 		void loadAll();
@@ -377,6 +406,7 @@ export default function BesoinAffectationPage({
 			aD_NoDocument_Affectation: 0,
 			aD_NoOrigine: 0,
 			aD_NoListDoc: 0,
+			listLignePiece: 0,
 		});
 	}, []);
 
@@ -453,8 +483,8 @@ export default function BesoinAffectationPage({
 					AD_TypeAffectation: form.aD_TypeAffectation,
 					EP_Tiers: form.eP_Tiers || undefined,
 					AD_NoDocument_Affectation: form.aD_NoDocument_Affectation || undefined,
-					TP_No: tpNo,
-					...(tpNo === TypeSage.BC_Achat ? { AD_Etat: 1 } : {}),
+					TP_No: actualTpNo,
+					...(actualTpNo === TypeSage.BC_Achat ? { AD_Etat: 1 } : {}),
 				});
 			}
 			toast.success("Affectation enregistrée.");
@@ -507,7 +537,7 @@ export default function BesoinAffectationPage({
 			return;
 		}
 		try {
-			await genererAffectationFournisseur(besoinId, tpNo);
+			await genererAffectationFournisseur(besoinId, actualTpNo);
 			toast.success("Affectations générées.");
 			resetForm();
 			await loadAll();
@@ -525,11 +555,12 @@ export default function BesoinAffectationPage({
 		}
 		setGenerating(true);
 		try {
-			const typeV = isRetourDemande ? Type_Validation.Retour_Demande_Validation : (0 as Type_Validation);
-			await genererDocument(besoinId, tpNo, typeV);
+			// type: Type_Validation.Demande_Besoin (0) pour demande normale, Type_Validation.Retour_Demande_Validation (1) pour retour
+			const typeV = isRetourDemande ? Type_Validation.Retour_Demande_Validation : Type_Validation.Demande_Besoin;
+			await genererDocument(besoinId, actualTpNo, typeV);
 			toast.success("Validation terminée.");
-			if (isRetourDemande) window.location.href = "/Document/Bons_Commande";
-			else window.location.href = `/Besoin/DetailsDemande?id=${besoinId}&type=${tpNo}`;
+			if (isRetourDemande) window.location.href = "/documents?tpNo=12";
+			else onBack(); // Retourner à la page précédente au lieu de rediriger vers une route inexistante
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Erreur pendant la validation.");
 		} finally {
@@ -789,6 +820,33 @@ export default function BesoinAffectationPage({
 										<MenuItem value={TypeAffectation.Document}>Document</MenuItem>
 									</Select>
 								</FormControl>
+								{showListLignePiece && (
+									<FormControl size="small" fullWidth>
+										<InputLabel>Ligne de pièce</InputLabel>
+										<Select
+											label="Ligne de pièce"
+											value={form.listLignePiece}
+											disabled={formDisabled}
+											onChange={async (e) => {
+												const adNo = Number(e.target.value);
+												setForm((p) => ({ ...p, listLignePiece: adNo }));
+												await loadDocsForAffectation(adNo);
+											}}
+										>
+											<MenuItem value={0}>Choisir</MenuItem>
+											{affectations.map((aff) => {
+												const a = aff as Record<string, unknown>;
+												const adNo = asNumber(a.AD_No ?? a.aD_No);
+												const doc = asString(a.AD_Document ?? a.aD_Document);
+												return (
+													<MenuItem key={adNo} value={adNo}>
+														{doc || `Affectation ${adNo}`}
+													</MenuItem>
+												);
+											})}
+										</Select>
+									</FormControl>
+								)}
 							</Stack>
 						)}
 
@@ -888,7 +946,7 @@ export default function BesoinAffectationPage({
 
 						{/* Boutons */}
 						<Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-							{showCrudButtons && canCreate && (
+							{showBtnEnregistrer && (
 								<Button
 									variant="contained"
 									size="small"
@@ -898,7 +956,7 @@ export default function BesoinAffectationPage({
 									Enregistrer
 								</Button>
 							)}
-							{showCrudButtons && canDelete && (
+							{showBtnSupprimer && (
 								<Button
 									variant="outlined"
 									color="error"
@@ -919,7 +977,7 @@ export default function BesoinAffectationPage({
 									Générer selon fournisseur affecté
 								</Button>
 							)}
-							{showCrudButtons && canCreate && (
+							{showBtnNouveau && (
 								<Button variant="outlined" size="small" onClick={resetForm}>
 									Nouveau
 								</Button>
@@ -981,6 +1039,7 @@ export default function BesoinAffectationPage({
 														),
 														aD_NoOrigine: asNumber(r.AD_NoOrigine ?? r.aD_NoOrigine),
 														aD_NoListDoc: asNumber(r.AD_NoDocument_Affectation ?? r.aD_NoDocument_Affectation),
+														listLignePiece: adNo,
 													});
 													void loadDocsForAffectation(adNo);
 												}
@@ -1032,8 +1091,8 @@ export default function BesoinAffectationPage({
 				</>
 			)}
 
-			{/* Tableaux comparatifs */}
-			{lieeDemandeGenerer && (
+			{/* Tableaux comparatifs - logique MVC: afficher si lieeDemandeGenerer OU si showHistorique */}
+			{(lieeDemandeGenerer || showHistorique) && (
 				<Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
 					<Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mb: 2 }}>
 						<Typography variant="subtitle1" sx={{ color: "primary.main", fontWeight: 600 }}>

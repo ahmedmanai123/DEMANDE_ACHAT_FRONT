@@ -1,5 +1,5 @@
-import apiClient from "@/api/apiClient";
 import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
+import apiClient from "@/api/apiClient";
 import type {
 	AFFECTATION_DEMANDEDto,
 	ChampLibreDto,
@@ -427,7 +427,7 @@ export const deleteAffectation = async (aD_No: number, b_No: number) =>
 
 export const genererAffectationFournisseur = async (b_No: number, tP_No: number) =>
 	postWithFallback<unknown>(`${b_No}/generer-affectation-fournisseur`, null, {
-		params: { tP_No },
+		params: { tpNo: tP_No },
 	});
 
 export const genererDocument = async (b_No: number, tP_No: TypeSage, type: Type_Validation) =>
