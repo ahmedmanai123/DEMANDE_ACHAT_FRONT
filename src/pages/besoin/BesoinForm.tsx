@@ -1,12 +1,13 @@
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LocalPrintshopIcon from "@mui/icons-material/LocalPrintshop";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import {
 	Accordion,
 	AccordionDetails,
@@ -14,8 +15,6 @@ import {
 	Alert,
 	Box,
 	Button,
-	Card as MuiCard,
-	CardContent as MuiCardContent,
 	Chip,
 	CircularProgress,
 	Dialog,
@@ -23,11 +22,14 @@ import {
 	DialogContent,
 	DialogTitle,
 	Divider,
+	FormControl,
 	Grid,
 	IconButton,
 	InputAdornment,
 	InputLabel,
 	MenuItem,
+	Card as MuiCard,
+	CardContent as MuiCardContent,
 	Paper,
 	Select,
 	type SelectChangeEvent,
@@ -58,8 +60,8 @@ import {
 import { useUserInfo } from "@/store/userStore";
 import type { IArticle } from "@/types/article";
 import {
-	Etat_Besoin,
 	type ChampLibreDto,
+	Etat_Besoin,
 	type IAffaire,
 	type IBesoin,
 	type IBesoinArticle,
@@ -109,14 +111,6 @@ const besoinSelectMenuProps = {
 			},
 		},
 	},
-};
-
-const besoinDropdownLabelSx = {
-	fontWeight: 600,
-	fontSize: "0.8125rem",
-	color: "text.secondary",
-	mb: 0.5,
-	display: "block",
 };
 
 const accordionBlockSx = {
@@ -254,7 +248,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 		b_EtatRetour: 0,
 	});
 
-	/** Popup « choix article » (équivalent MVC Article + Action_View_Article.Choix + dE_No). */
+	/** Popup « choix article » */
 	const [articlePickerOpen, setArticlePickerOpen] = useState(false);
 	const [articlePickerLoading, setArticlePickerLoading] = useState(false);
 	const [articlePickerRows, setArticlePickerRows] = useState<IArticle[]>([]);
@@ -809,6 +803,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 			</Stack>
 
 			<Stack spacing={2}>
+				{/* ── Informations Générales ── */}
 				<Accordion defaultExpanded sx={accordionBlockSx}>
 					<AccordionSummary expandIcon={<ExpandMoreIcon />}>
 						<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -868,6 +863,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 					</AccordionDetails>
 				</Accordion>
 
+				{/* ── Détails de la demande ── */}
 				<Accordion defaultExpanded sx={accordionBlockSx}>
 					<AccordionSummary expandIcon={<ExpandMoreIcon />}>
 						<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -876,33 +872,42 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 					</AccordionSummary>
 					<AccordionDetails>
 						<Grid container spacing={2}>
+							{/* ── Type de besoin ── */}
 							<Grid size={{ xs: 12, md: 4 }}>
-								<InputLabel shrink required sx={besoinDropdownLabelSx}>
-									Type de besoin
-								</InputLabel>
-								<Select
+								<FormControl
 									fullWidth
 									size="small"
-									variant="outlined"
-									value={formValues.bT_Id}
-									onChange={handleTypeChange}
+									required
 									disabled={!canEditType}
-									sx={besoinSelectSx}
-									MenuProps={besoinSelectMenuProps}
+									sx={{
+										"& .MuiOutlinedInput-root": { borderRadius: 2 },
+										"& .MuiInputLabel-root": { fontWeight: 500 },
+									}}
 								>
-									<MenuItem value={0}>Choisir</MenuItem>
-									{typesBesoin.map((type) => {
-										const row = type as unknown as Record<string, unknown>;
-										const typeId = asNumber(row.BT_Id ?? row.bT_Id);
-										const label = asString(row.BT_Intitule ?? row.bT_Intitule);
-										return (
-											<MenuItem key={typeId} value={typeId}>
-												{label || `Type ${typeId}`}
-											</MenuItem>
-										);
-									})}
-								</Select>
+									<InputLabel>Type de besoin</InputLabel>
+									<Select
+										label="Type de besoin"
+										value={formValues.bT_Id}
+										onChange={handleTypeChange}
+										sx={besoinSelectSx}
+										MenuProps={besoinSelectMenuProps}
+									>
+										<MenuItem value={0}>Choisir</MenuItem>
+										{typesBesoin.map((type) => {
+											const row = type as unknown as Record<string, unknown>;
+											const typeId = asNumber(row.BT_Id ?? row.bT_Id);
+											const label = asString(row.BT_Intitule ?? row.bT_Intitule);
+											return (
+												<MenuItem key={typeId} value={typeId}>
+													{label || `Type ${typeId}`}
+												</MenuItem>
+											);
+										})}
+									</Select>
+								</FormControl>
 							</Grid>
+
+							{/* ── Titre ── */}
 							<Grid size={{ xs: 12, md: 4 }}>
 								<TextField
 									{...besoinTextFieldDefaults}
@@ -913,6 +918,8 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 									disabled={!canEditBesoin}
 								/>
 							</Grid>
+
+							{/* ── Date de livraison ── */}
 							<Grid size={{ xs: 12, md: 4 }}>
 								<TextField
 									{...besoinTextFieldDefaults}
@@ -925,75 +932,86 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 									disabled={!canEditBesoin}
 								/>
 							</Grid>
+
+							{/* ── Dépôt ── */}
 							<Grid size={{ xs: 12, md: 4 }}>
-								<InputLabel
-									shrink
+								<FormControl
+									fullWidth
+									size="small"
 									required={asBoolean((infoTypeBesoin as Record<string, unknown> | null)?.BT_DepotObligatoire)}
-									sx={besoinDropdownLabelSx}
-								>
-									Dépôt
-								</InputLabel>
-								<Select
-									fullWidth
-									size="small"
-									variant="outlined"
-									value={formValues.dE_No}
-									onChange={(event) => handleFormChange("dE_No", event.target.value)}
 									disabled={!canEditBesoin}
-									sx={besoinSelectSx}
-									MenuProps={besoinSelectMenuProps}
+									sx={{
+										"& .MuiOutlinedInput-root": { borderRadius: 2 },
+										"& .MuiInputLabel-root": { fontWeight: 500 },
+									}}
 								>
-									<MenuItem value="">Choisir</MenuItem>
-									{depots.map((depot) => {
-										const depotNo = String(
-											(depot as Record<string, unknown>).DE_No ?? (depot as Record<string, unknown>).dE_No ?? "",
-										);
-										const label = asString(
-											(depot as Record<string, unknown>).DE_Intitule ?? (depot as Record<string, unknown>).dE_Intitule,
-										);
-										return (
-											<MenuItem key={depotNo} value={depotNo}>
-												{label}
-											</MenuItem>
-										);
-									})}
-								</Select>
+									<InputLabel>Dépôt</InputLabel>
+									<Select
+										label="Dépôt"
+										value={formValues.dE_No}
+										onChange={(event) => handleFormChange("dE_No", event.target.value)}
+										sx={besoinSelectSx}
+										MenuProps={besoinSelectMenuProps}
+									>
+										<MenuItem value="">Choisir</MenuItem>
+										{depots.map((depot) => {
+											const depotNo = String(
+												(depot as Record<string, unknown>).DE_No ?? (depot as Record<string, unknown>).dE_No ?? "",
+											);
+											const label = asString(
+												(depot as Record<string, unknown>).DE_Intitule ??
+													(depot as Record<string, unknown>).dE_Intitule,
+											);
+											return (
+												<MenuItem key={depotNo} value={depotNo}>
+													{label}
+												</MenuItem>
+											);
+										})}
+									</Select>
+								</FormControl>
 							</Grid>
+
+							{/* ── Affaire ── */}
 							<Grid size={{ xs: 12, md: 4 }}>
-								<InputLabel
-									shrink
-									required={asBoolean((infoTypeBesoin as Record<string, unknown> | null)?.BT_AffaireObligatoire)}
-									sx={besoinDropdownLabelSx}
-								>
-									Affaire
-								</InputLabel>
-								<Select
+								<FormControl
 									fullWidth
 									size="small"
-									variant="outlined"
-									value={formValues.cA_Num}
-									onChange={(event) => handleFormChange("cA_Num", event.target.value)}
+									required={asBoolean((infoTypeBesoin as Record<string, unknown> | null)?.BT_AffaireObligatoire)}
 									disabled={!canEditBesoin}
-									sx={besoinSelectSx}
-									MenuProps={besoinSelectMenuProps}
+									sx={{
+										"& .MuiOutlinedInput-root": { borderRadius: 2 },
+										"& .MuiInputLabel-root": { fontWeight: 500 },
+									}}
 								>
-									<MenuItem value="">Choisir</MenuItem>
-									{affaires.map((affaire) => {
-										const code = asString(
-											(affaire as Record<string, unknown>).CA_Num ?? (affaire as Record<string, unknown>).cA_Num,
-										);
-										const label = asString(
-											(affaire as Record<string, unknown>).CA_Intitule ??
-												(affaire as Record<string, unknown>).cA_Intitule,
-										);
-										return (
-											<MenuItem key={code} value={code}>
-												{label}
-											</MenuItem>
-										);
-									})}
-								</Select>
+									<InputLabel>Affaire</InputLabel>
+									<Select
+										label="Affaire"
+										value={formValues.cA_Num}
+										onChange={(event) => handleFormChange("cA_Num", event.target.value)}
+										sx={besoinSelectSx}
+										MenuProps={besoinSelectMenuProps}
+									>
+										<MenuItem value="">Choisir</MenuItem>
+										{affaires.map((affaire) => {
+											const code = asString(
+												(affaire as Record<string, unknown>).CA_Num ?? (affaire as Record<string, unknown>).cA_Num,
+											);
+											const label = asString(
+												(affaire as Record<string, unknown>).CA_Intitule ??
+													(affaire as Record<string, unknown>).cA_Intitule,
+											);
+											return (
+												<MenuItem key={code} value={code}>
+													{label}
+												</MenuItem>
+											);
+										})}
+									</Select>
+								</FormControl>
 							</Grid>
+
+							{/* ── Degré d'importance ── */}
 							<Grid size={{ xs: 12, md: 4 }}>
 								<Box sx={{ px: 1 }}>
 									<Typography gutterBottom>Degré d'importance</Typography>
@@ -1011,6 +1029,8 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 									</Typography>
 								</Box>
 							</Grid>
+
+							{/* ── Description ── */}
 							<Grid size={12}>
 								<TextField
 									{...besoinTextFieldDefaults}
@@ -1023,6 +1043,8 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 									disabled={!canEditBesoin}
 								/>
 							</Grid>
+
+							{/* ── Champs libres besoin ── */}
 							{champsLibreBesoin.map((champ, index) => (
 								<Grid key={getChampKey(champ, index)} size={{ xs: 12, md: 4 }}>
 									<TextField
@@ -1038,6 +1060,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 					</AccordionDetails>
 				</Accordion>
 
+				{/* ── Articles demandés ── */}
 				<Accordion defaultExpanded sx={accordionBlockSx}>
 					<AccordionSummary expandIcon={<ExpandMoreIcon />}>
 						<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -1204,6 +1227,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 					</AccordionDetails>
 				</Accordion>
 
+				{/* ── Attachements ── */}
 				<Accordion defaultExpanded sx={accordionBlockSx}>
 					<AccordionSummary expandIcon={<ExpandMoreIcon />}>
 						<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -1252,6 +1276,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 					</AccordionDetails>
 				</Accordion>
 
+				{/* ── Circuit de validation ── */}
 				<Accordion defaultExpanded sx={accordionBlockSx}>
 					<AccordionSummary expandIcon={<ExpandMoreIcon />}>
 						<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -1333,12 +1358,13 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 				</Alert>
 			)}
 
+			{/* ── Dialog : choix article ── */}
 			<Dialog open={articlePickerOpen} onClose={() => setArticlePickerOpen(false)} maxWidth="lg" fullWidth>
 				<DialogTitle>Choisir un article</DialogTitle>
 				<DialogContent>
 					<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
 						Filtre catalogue (équivalent vue Article en mode choix). Le dépôt sélectionné sur la demande est transmis en{" "}
-						<code>dE_No</code> lorsqu’il est renseigné.
+						<code>dE_No</code> lorsqu'il est renseigné.
 					</Typography>
 					<Stack
 						direction={{ xs: "column", sm: "row" }}
@@ -1385,7 +1411,7 @@ export default function BesoinForm({ b_No, onBack }: Props) {
 										{articlePickerRows.length === 0 && (
 											<TableRow>
 												<TableCell colSpan={4} align="center">
-													Aucun article — vérifiez le dépôt, les filtres ou l’API <code>/api/article</code>.
+													Aucun article — vérifiez le dépôt, les filtres ou l'API <code>/api/article</code>.
 												</TableCell>
 											</TableRow>
 										)}

@@ -271,6 +271,33 @@ export const accountService = {
 		return response;
 	},
 
+	async updateProfile(data: {
+		id?: string;
+		userName: string;
+		us_UserIntitule: string;
+		email: string;
+		phoneNumber?: string;
+		bio?: string;
+		picture?: string;
+		profilePic?: File | null;
+	}) {
+		const form = new FormData();
+		Object.entries(data).forEach(([key, value]) => {
+			if (value === undefined || value === null) return;
+			if (value instanceof File) {
+				form.append(key, value);
+			} else {
+				form.append(key, String(value));
+			}
+		});
+		const response = await runWithFallback<{ isValid: boolean; Message?: string }>([
+			() => apiClient.post("/api/Account/Profile", form, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data),
+			() => apiClient.post("/api/account/Profile", form, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data),
+			() => apiClient.post("/Account/Profile",    form, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data),
+		]);
+		return response;
+	},
+
 	async changePassword(model: ChangePasswordModel) {
 		const response = await runWithFallback<any>([
 			() => postWithFallback("/api/Account/users/change-password", model),

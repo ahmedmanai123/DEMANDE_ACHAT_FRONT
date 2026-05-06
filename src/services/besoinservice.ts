@@ -564,6 +564,55 @@ export const cloutreGroupeArticle = async (b_No: number, bA_No: number, v_Achete
 export const getBesoinOrigine = async (b_No: number): Promise<DA_BESOINDto[]> =>
 	getWithFallback<DA_BESOINDto[]>(`${b_No}/besoin-origine`);
 
+export interface MotifItem {
+	Value: number;
+	value?: number;
+	Text: string;
+	text?: string;
+}
+
+export const getMotifs = async (b_No: number): Promise<MotifItem[]> => {
+	const customUrls = [
+		`/api/parametres/motifs?b_No=${b_No}`,
+		`/api/besoin/motifs?b_No=${b_No}`,
+		`/Parametres/SelectMotif?b_No=${b_No}`,
+	];
+	let lastError: unknown;
+	for (const url of customUrls) {
+		try {
+			const response = await apiClient.get<unknown>(url);
+			const rows = getArrayFromPayload<MotifItem>(response.data, "motifs", "data");
+			return rows;
+		} catch (error) {
+			lastError = error;
+			if (shouldTryNext(error)) continue;
+		}
+	}
+	console.warn("getMotifs: aucun endpoint disponible", lastError);
+	return [];
+};
+
+export const getRetourBesoinArticles = async (
+	id: number,
+): Promise<Array<Record<string, unknown>>> => {
+	const customUrls = [
+		`/api/RetourBesoin/article-retour/${id}`,
+		`/RetourBesoin/GetRetourBesoinArticle?id=${id}`,
+	];
+	let lastError: unknown;
+	for (const url of customUrls) {
+		try {
+			const response = await apiClient.get<unknown>(url);
+			return getArrayFromPayload<Record<string, unknown>>(response.data, "data");
+		} catch (error) {
+			lastError = error;
+			if (shouldTryNext(error)) continue;
+		}
+	}
+	console.warn("getRetourBesoinArticles: aucun endpoint disponible", lastError);
+	return [];
+};
+
 // ─── Service objects ──────────────────────────────────────────────────────────
 
 export const besoinService = {

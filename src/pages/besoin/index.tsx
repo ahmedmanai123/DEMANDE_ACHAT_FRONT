@@ -1,80 +1,95 @@
 // src/pages/besoin/index.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import BesoinAffectationPage from "@/pages/besoin/BesoinAffectationPage";
 import BesoinForm from "@/pages/besoin/BesoinForm";
 import BesoinGestionDemandesPage from "@/pages/besoin/BesoinGestionDemandesPage";
 import BesoinList from "@/pages/besoin/BesoinList";
 import BesoinValidationPage from "@/pages/besoin/BesoinValidationPage";
-import { TypeSage } from "@/types/besoin";
 
 export default function BesoinPage() {
-	const params = new URLSearchParams(window.location.search);
-	const mode = params.get("mode");
-	const affectationId = Number(params.get("id") || 0);
-	const validationBesoinId = Number(params.get("b_No") || 0);
-	const affectationType = Number(params.get("type") || TypeSage.Demande_Achat);
-	const [view, setView] = useState<"list" | "form">("list");
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	const mode             = searchParams.get("mode");
+	const affectationId    = Number(searchParams.get("id")   || 0);
+	const validationBesoinId = Number(searchParams.get("b_No") || 0);
+	// 0 = type non fourni explicitement → auto-détecté depuis les données de la demande
+	const typeParam        = searchParams.get("type");
+	const affectationType  = typeParam !== null ? Number(typeParam) : 0;
+
+	const [view,   setView]   = useState<"list" | "form">("list");
 	const [editId, setEditId] = useState<number>(0);
 
-	const handleEdit = (b_No: number) => {
+	// ── Reset au clic sidebar ──────────────────────────────────────────────────
+	// Quand l'URL revient à /besoins (mode null) depuis n'importe quel sous-état,
+	// on force le retour à la liste.
+	useEffect(() => {
+		if (!mode) {
+			setView("list");
+			setEditId(0);
+		}
+	}, [mode]);
+
+	// ── Navigation helpers ────────────────────────────────────────────────────
+
+	const goToForm = (b_No: number) => {
 		setEditId(b_No);
 		setView("form");
 	};
 
-	const handleView = (b_No: number) => {
-		setEditId(b_No);
-		setView("form");
-	};
-
-	const handleBack = () => {
-		setEditId(0);
+	const goToList = () => {
 		setView("list");
+		setEditId(0);
+		// Nettoyer les params URL sans recharger la page
+		setSearchParams({}, { replace: true });
 	};
 
-	// Mode affectation (depuis gestion demandes)
+	// ── Modes URL ─────────────────────────────────────────────────────────────
+
+	// Affectation (depuis gestion demandes ou bon de commande acheteur)
 	if (mode === "affectation" && affectationId > 0) {
-		return <BesoinAffectationPage besoinId={affectationId} tpNo={affectationType} onBack={handleBack} />;
+		return (
+			<BesoinAffectationPage
+				besoinId={affectationId}
+				tpNo={affectationType}
+				onBack={goToList}
+			/>
+		);
 	}
 
+	// Validation directe via URL
 	if (mode === "validation" && affectationId > 0 && validationBesoinId > 0) {
 		return (
 			<BesoinValidationPage
 				validationId={affectationId}
 				besoinId={validationBesoinId}
-				onBack={() => {
-					window.history.replaceState(null, "", "/besoins");
-					handleBack();
-				}}
+				onBack={goToList}
 			/>
 		);
 	}
 
-	// Mode gestion des demandes
+	// Gestion des demandes (acheteur)
 	if (mode === "gestion-demandes") {
 		return (
 			<BesoinGestionDemandesPage
 				onOpenDetail={(bNo, tpNo) => {
-					// Redirection vers le mode affectation avec les paramètres corrects
-					window.location.search = `?mode=affectation&id=${bNo}&type=${tpNo}`;
+					setSearchParams(
+						{ mode: "affectation", id: String(bNo), type: String(tpNo) },
+						{ replace: false },
+					);
 				}}
 			/>
 		);
 	}
 
-	// Mode besoin affectation (direct) - À DÉFINIR SI NÉCESSAIRE
-	// if (mode === "besoin-affectation") {
-	// 	return <BesoinAffectationPage besoinId={affectationId} tpNo={affectationType} onBack={handleBack} />;
-	// }
-
-	// Mode besoin form (direct) - À DÉFINIR SI NÉCESSAIRE
-	// if (mode === "besoin" && affectationId > 0) {
-	// 	return <BesoinForm b_No={affectationId} onBack={handleBack} />;
-	// }
-
-	// Mode liste par défaut
+	// ── Défaut : liste ou formulaire ──────────────────────────────────────────
 	return view === "list" ? (
-		<BesoinList onEdit={handleEdit} onNew={() => handleEdit(0)} onView={handleView} />
+		<BesoinList
+			onEdit={goToForm}
+			onNew={() => goToForm(0)}
+			onView={goToForm}
+		/>
 	) : (
-		<BesoinForm b_No={editId} onBack={handleBack} />
+		<BesoinForm b_No={editId} onBack={goToList} />
 	);
 }

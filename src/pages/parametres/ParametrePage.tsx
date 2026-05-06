@@ -1,4 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ImageIcon from "@mui/icons-material/Image";
@@ -10,6 +12,7 @@ import {
 	Button,
 	Card,
 	CardContent,
+	Chip,
 	Dialog,
 	DialogActions,
 	DialogContent,
@@ -18,6 +21,7 @@ import {
 	Grid,
 	IconButton,
 	MenuItem,
+	Paper,
 	Stack,
 	Switch,
 	Tab,
@@ -650,114 +654,295 @@ export default function ParametrePage() {
 
 			{/* Logo & Fond Tab */}
 			{tabValue === 0 && (
-				<Card variant="outlined">
-					<CardContent>
-						<Stack spacing={3}>
-							<Grid container spacing={3}>
-								<Grid size={{ xs: 12, md: 6 }}>
-									<Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+				<Stack spacing={3}>
+					<Grid container spacing={3}>
+
+						{/* ── Logo Société ───────────────────────────────────────────────── */}
+						<Grid size={{ xs: 12, md: 6 }}>
+							<Paper
+								variant="outlined"
+								sx={{ borderRadius: 3, overflow: "hidden", height: "100%" }}
+							>
+								{/* En-tête section */}
+								<Box sx={{ px: 3, py: 2, borderBottom: "1px solid", borderColor: "divider", display: "flex", alignItems: "center", gap: 1.5 }}>
+									<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "primary.main" }} />
+									<Typography variant="subtitle2" fontWeight={700}>
 										Logo Société
 									</Typography>
-									{logoPreview ? (
-										<Box sx={{ mb: 2 }}>
-											<Avatar src={logoPreview} sx={{ width: 120, height: 120 }} variant="rounded" />
-										</Box>
-									) : (
-										<Box
-											sx={{
-												width: 120,
-												height: 120,
-												mb: 2,
-												bgcolor: "grey.200",
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "center",
-												borderRadius: 2,
-											}}
-										>
-											<ImageIcon sx={{ fontSize: 40, color: "grey.500" }} />
-										</Box>
+									{logoFile && (
+										<Chip label="Modifié" size="small" color="warning" sx={{ ml: "auto", height: 20, fontSize: 11 }} />
 									)}
-									<Button
-										variant="outlined"
-										startIcon={<UploadIcon />}
+								</Box>
+
+								<Box sx={{ p: 3 }}>
+									{/* Zone preview */}
+									<Box
+										sx={{
+											width: "100%",
+											height: 160,
+											border: "2px dashed",
+											borderColor: logoPreview ? "primary.light" : "grey.300",
+											borderRadius: 3,
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											bgcolor: logoPreview ? "primary.50" : "grey.50",
+											position: "relative",
+											overflow: "hidden",
+											mb: 2,
+											transition: "all 0.2s",
+											cursor: "pointer",
+											"&:hover": {
+												borderColor: "primary.main",
+												bgcolor: "primary.50",
+											},
+										}}
 										onClick={() => document.getElementById("logo-upload")?.click()}
 									>
-										Choisir un logo
-									</Button>
-									<input
-										id="logo-upload"
-										type="file"
-										accept="image/*"
-										style={{ display: "none" }}
-										onChange={(e) => {
-											const file = e.target.files?.[0];
-											if (file) setLogoFile(file);
-										}}
-									/>
-								</Grid>
-								<Grid size={{ xs: 12, md: 6 }}>
-									<Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-										Fond d'écran de connexion
-									</Typography>
-									{bgPreview ? (
-										<Box sx={{ mb: 2 }}>
-											<img
-												src={bgPreview}
-												alt="Background"
-												style={{ width: "100%", maxWidth: 300, height: 120, objectFit: "cover", borderRadius: 8 }}
-											/>
-										</Box>
-									) : (
-										<Box
-											sx={{
-												width: "100%",
-												maxWidth: 300,
-												height: 120,
-												mb: 2,
-												bgcolor: "grey.200",
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "center",
-												borderRadius: 8,
-											}}
+										{logoPreview ? (
+											<>
+												<img
+													src={logoPreview}
+													alt="Logo"
+													style={{
+														maxWidth: "100%",
+														maxHeight: "100%",
+														objectFit: "contain",
+														padding: 12,
+													}}
+												/>
+												{/* Badge fichier actuel */}
+												<Box sx={{
+													position: "absolute",
+													top: 8,
+													left: 8,
+													display: "flex",
+													alignItems: "center",
+													gap: 0.5,
+													bgcolor: "rgba(255,255,255,0.9)",
+													borderRadius: 2,
+													px: 1,
+													py: 0.3,
+												}}>
+													<CheckCircleIcon sx={{ fontSize: 13, color: "success.main" }} />
+													<Typography variant="caption" fontWeight={600} color="success.main">
+														{logoFile ? logoFile.name : "Logo actuel"}
+													</Typography>
+												</Box>
+											</>
+										) : (
+											<Stack alignItems="center" spacing={1}>
+												<Box sx={{
+													width: 56,
+													height: 56,
+													borderRadius: 3,
+													bgcolor: "grey.200",
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+												}}>
+													<ImageIcon sx={{ fontSize: 28, color: "grey.400" }} />
+												</Box>
+												<Typography variant="body2" color="text.secondary" fontWeight={500}>
+													Cliquez pour sélectionner
+												</Typography>
+												<Typography variant="caption" color="text.disabled">
+													PNG, JPG, SVG — max 2 MB
+												</Typography>
+											</Stack>
+										)}
+									</Box>
+
+									{/* Boutons actions */}
+									<Stack direction="row" spacing={1}>
+										<Button
+											variant="contained"
+											size="small"
+											startIcon={<UploadIcon />}
+											onClick={() => document.getElementById("logo-upload")?.click()}
+											sx={{ borderRadius: 2, flex: 1 }}
 										>
-											<ImageIcon sx={{ fontSize: 40, color: "grey.500" }} />
+											{logoPreview ? "Remplacer" : "Choisir un logo"}
+										</Button>
+										{logoPreview && (
+											<Tooltip title="Supprimer le logo">
+												<IconButton
+													size="small"
+													color="error"
+													sx={{ border: "1px solid", borderColor: "error.light", borderRadius: 2 }}
+													onClick={() => {
+														setLogoFile(null);
+														setParametre((p) => ({ ...p, pA_LogoSociete: "" }));
+													}}
+												>
+													<CloseIcon fontSize="small" />
+												</IconButton>
+											</Tooltip>
+										)}
+									</Stack>
+
+									{logoFile && (
+										<Box sx={{ mt: 1.5, display: "flex", alignItems: "center", gap: 1, p: 1.5, bgcolor: "warning.50", borderRadius: 2, border: "1px solid", borderColor: "warning.200" }}>
+											<CheckCircleIcon sx={{ fontSize: 15, color: "warning.main" }} />
+											<Typography variant="caption" fontWeight={600} color="warning.dark" noWrap>
+												{logoFile.name}
+											</Typography>
+											<Typography variant="caption" color="text.secondary" sx={{ ml: "auto", whiteSpace: "nowrap" }}>
+												{(logoFile.size / 1024).toFixed(0)} KB
+											</Typography>
 										</Box>
 									)}
-									<Button
-										variant="outlined"
-										startIcon={<UploadIcon />}
+								</Box>
+
+								<input
+									id="logo-upload"
+									type="file"
+									accept="image/*"
+									style={{ display: "none" }}
+									onChange={(e) => { const f = e.target.files?.[0]; if (f) setLogoFile(f); e.target.value = ""; }}
+								/>
+							</Paper>
+						</Grid>
+
+						{/* ── Fond d'écran ──────────────────────────────────────────────── */}
+						<Grid size={{ xs: 12, md: 6 }}>
+							<Paper
+								variant="outlined"
+								sx={{ borderRadius: 3, overflow: "hidden", height: "100%" }}
+							>
+								{/* En-tête section */}
+								<Box sx={{ px: 3, py: 2, borderBottom: "1px solid", borderColor: "divider", display: "flex", alignItems: "center", gap: 1.5 }}>
+									<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "secondary.main" }} />
+									<Typography variant="subtitle2" fontWeight={700}>
+										Fond d'écran de connexion
+									</Typography>
+									{bgFile && (
+										<Chip label="Modifié" size="small" color="warning" sx={{ ml: "auto", height: 20, fontSize: 11 }} />
+									)}
+								</Box>
+
+								<Box sx={{ p: 3 }}>
+									{/* Zone preview */}
+									<Box
+										sx={{
+											width: "100%",
+											height: 160,
+											border: "2px dashed",
+											borderColor: bgPreview ? "secondary.light" : "grey.300",
+											borderRadius: 3,
+											overflow: "hidden",
+											mb: 2,
+											position: "relative",
+											cursor: "pointer",
+											transition: "all 0.2s",
+											"&:hover": { borderColor: "secondary.main", opacity: 0.9 },
+										}}
 										onClick={() => document.getElementById("bg-upload")?.click()}
 									>
-										Choisir un fond
-									</Button>
-									<input
-										id="bg-upload"
-										type="file"
-										accept="image/*"
-										style={{ display: "none" }}
-										onChange={(e) => {
-											const file = e.target.files?.[0];
-											if (file) setBgFile(file);
-										}}
-									/>
-								</Grid>
-							</Grid>
-							<Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-								<Button
-									variant="contained"
-									color="primary"
-									onClick={handleSaveParametreWithFiles}
-									disabled={isSaving}
-									startIcon={<SaveIcon />}
-								>
-									{isSaving ? "Enregistrement..." : "Enregistrer"}
-								</Button>
-							</Box>
-						</Stack>
-					</CardContent>
-				</Card>
+										{bgPreview ? (
+											<>
+												<img
+													src={bgPreview}
+													alt="Fond écran"
+													style={{ width: "100%", height: "100%", objectFit: "cover" }}
+												/>
+												<Box sx={{
+													position: "absolute",
+													inset: 0,
+													background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6))",
+													display: "flex",
+													alignItems: "flex-end",
+													p: 1.5,
+												}}>
+													<Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+														<CheckCircleIcon sx={{ fontSize: 14, color: "#fff" }} />
+														<Typography variant="caption" fontWeight={600} color="white">
+															{bgFile ? bgFile.name : "Image actuelle"}
+														</Typography>
+													</Box>
+												</Box>
+											</>
+										) : (
+											<Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 1, bgcolor: "grey.50" }}>
+												<Box sx={{ width: 56, height: 56, borderRadius: 3, bgcolor: "grey.200", display: "flex", alignItems: "center", justifyContent: "center" }}>
+													<ImageIcon sx={{ fontSize: 28, color: "grey.400" }} />
+												</Box>
+												<Typography variant="body2" color="text.secondary" fontWeight={500}>
+													Cliquez pour sélectionner
+												</Typography>
+												<Typography variant="caption" color="text.disabled">
+													PNG, JPG — recommandé 1920×1080
+												</Typography>
+											</Box>
+										)}
+									</Box>
+
+									{/* Boutons actions */}
+									<Stack direction="row" spacing={1}>
+										<Button
+											variant="contained"
+											color="secondary"
+											size="small"
+											startIcon={<UploadIcon />}
+											onClick={() => document.getElementById("bg-upload")?.click()}
+											sx={{ borderRadius: 2, flex: 1 }}
+										>
+											{bgPreview ? "Remplacer" : "Choisir un fond"}
+										</Button>
+										{bgPreview && (
+											<Tooltip title="Supprimer le fond">
+												<IconButton
+													size="small"
+													color="error"
+													sx={{ border: "1px solid", borderColor: "error.light", borderRadius: 2 }}
+													onClick={() => {
+														setBgFile(null);
+														setParametre((p) => ({ ...p, pA_ImgFondEcran: "" }));
+													}}
+												>
+													<CloseIcon fontSize="small" />
+												</IconButton>
+											</Tooltip>
+										)}
+									</Stack>
+
+									{bgFile && (
+										<Box sx={{ mt: 1.5, display: "flex", alignItems: "center", gap: 1, p: 1.5, bgcolor: "warning.50", borderRadius: 2, border: "1px solid", borderColor: "warning.200" }}>
+											<CheckCircleIcon sx={{ fontSize: 15, color: "warning.main" }} />
+											<Typography variant="caption" fontWeight={600} color="warning.dark" noWrap>
+												{bgFile.name}
+											</Typography>
+											<Typography variant="caption" color="text.secondary" sx={{ ml: "auto", whiteSpace: "nowrap" }}>
+												{(bgFile.size / 1024).toFixed(0)} KB
+											</Typography>
+										</Box>
+									)}
+								</Box>
+
+								<input
+									id="bg-upload"
+									type="file"
+									accept="image/*"
+									style={{ display: "none" }}
+									onChange={(e) => { const f = e.target.files?.[0]; if (f) setBgFile(f); e.target.value = ""; }}
+								/>
+							</Paper>
+						</Grid>
+					</Grid>
+
+					{/* ── Bouton Enregistrer ──────────────────────────────────────────── */}
+					<Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+						<Button
+							variant="contained"
+							onClick={handleSaveParametreWithFiles}
+							disabled={isSaving}
+							startIcon={isSaving ? undefined : <SaveIcon />}
+							sx={{ borderRadius: 2, px: 4, minWidth: 160 }}
+						>
+							{isSaving ? "Enregistrement..." : "Enregistrer"}
+						</Button>
+					</Box>
+				</Stack>
 			)}
 
 			{/* Dépôts Autorisés Tab */}

@@ -155,62 +155,7 @@ export const frontendNavData: NavProps["data"] = [
 					},
 				],
 			},
-			// menulevel
-			{
-				title: "sys.nav.menulevel.index",
-				path: "/menu_level",
-				icon: <Icon icon="local:ic-menulevel" size="24" />,
-				children: [
-					{
-						title: "sys.nav.menulevel.1a",
-						path: "/menu_level/1a",
-					},
-					{
-						title: "sys.nav.menulevel.1b.index",
-						path: "/menu_level/1b",
-						children: [
-							{
-								title: "sys.nav.menulevel.1b.2a",
-								path: "/menu_level/1b/2a",
-							},
-							{
-								title: "sys.nav.menulevel.1b.2b.index",
-								path: "/menu_level/1b/2b",
-								children: [
-									{
-										title: "sys.nav.menulevel.1b.2b.3a",
-										path: "/menu_level/1b/2b/3a",
-									},
-									{
-										title: "sys.nav.menulevel.1b.2b.3b",
-										path: "/menu_level/1b/2b/3b",
-									},
-								],
-							},
-						],
-					},
-				],
-			},
-			// errors
-			{
-				title: "sys.nav.error.index",
-				path: "/error",
-				icon: <Icon icon="bxs:error-alt" size="24" />,
-				children: [
-					{
-						title: "sys.nav.error.403",
-						path: "/error/403",
-					},
-					{
-						title: "sys.nav.error.404",
-						path: "/error/404",
-					},
-					{
-						title: "sys.nav.error.500",
-						path: "/error/500",
-					},
-				],
-			},
+	
 		],
 	},
 	{

@@ -156,6 +156,119 @@ export const getDupliquerDocument = async (epNumero: string, tpNo: number) =>
 export const dupliquerEnteteDocument = async (payload: Record<string, unknown>) =>
 	postWithFallback<unknown>("dupliquer", payload);
 
+export interface AttachementLigne {
+	AT_No?: number;
+	aT_No?: number;
+	AT_FileName?: string;
+	aT_FileName?: string;
+	AT_OriginalFileName?: string;
+	aT_OriginalFileName?: string;
+	AT_DateCreation?: string;
+	aT_DateCreation?: string;
+	AT_Size?: number;
+	aT_Size?: number;
+	AT_ContentType?: string;
+	aT_ContentType?: string;
+	[key: string]: unknown;
+}
+
+export const getAttachementsLigne = async (
+	lP_No: number,
+): Promise<AttachementLigne[]> => {
+	const urls = [
+		`/api/attachements/ligne/${lP_No}`,
+		`/api/Attachements/AttachementsLigneDocument?lP_NoLigne=${lP_No}`,
+		`/Attachements/AttachementsLigneDocument?lP_NoLigne=${lP_No}`,
+	];
+	let lastError: unknown;
+	for (const url of urls) {
+		try {
+			const res = await apiClient.get<unknown>(url);
+			const data = res.data;
+			if (Array.isArray(data)) return data as AttachementLigne[];
+			const record = toRecord(data);
+			const list = record.data ?? record.files ?? record.attachements ?? record.Attachements;
+			if (Array.isArray(list)) return list as AttachementLigne[];
+			return [];
+		} catch (error) {
+			lastError = error;
+			if (shouldTryNext(error)) continue;
+		}
+	}
+	console.warn("getAttachementsLigne: aucun endpoint disponible", lastError);
+	return [];
+};
+
+export const uploadAttachementLigne = async (
+	lP_No: number,
+	files: File[],
+): Promise<void> => {
+	const form = new FormData();
+	files.forEach((f) => form.append("files", f));
+	const urls = [
+		`/api/attachements/ligne/${lP_No}/upload`,
+		`/api/Attachements/UploadAttachementLigne?lP_NoLigne=${lP_No}`,
+		`/Attachements/UploadAttachementLigne?lP_NoLigne=${lP_No}`,
+	];
+	for (const url of urls) {
+		try {
+			await apiClient.post(url, form, {
+				headers: { "Content-Type": "multipart/form-data" },
+			});
+			return;
+		} catch (error) {
+			if (shouldTryNext(error)) continue;
+			throw error;
+		}
+	}
+};
+
+export const deleteAttachementLigne = async (
+	lP_No: number,
+	aT_No: number,
+): Promise<void> => {
+	const urls = [
+		`/api/attachements/ligne/${lP_No}/${aT_No}`,
+		`/api/Attachements/DeleteAttachementLigne?lP_NoLigne=${lP_No}&aT_No=${aT_No}`,
+	];
+	for (const url of urls) {
+		try {
+			await apiClient.delete(url);
+			return;
+		} catch (error) {
+			if (shouldTryNext(error)) continue;
+			throw error;
+		}
+	}
+};
+
+export const downloadAttachementLigne = async (
+	lP_No: number,
+	aT_No: number,
+	fileName: string,
+): Promise<void> => {
+	const urls = [
+		`/api/attachements/ligne/${lP_No}/download/${aT_No}`,
+		`/api/Attachements/DownloadAttachementLigne?lP_NoLigne=${lP_No}&aT_No=${aT_No}`,
+		`/Attachements/DownloadAttachementLigne?lP_NoLigne=${lP_No}&aT_No=${aT_No}`,
+	];
+	for (const url of urls) {
+		try {
+			const res = await apiClient.get<Blob>(url, { responseType: "blob" });
+			const blobUrl = URL.createObjectURL(res.data);
+			const a = document.createElement("a");
+			a.href = blobUrl;
+			a.download = fileName;
+			a.click();
+			URL.revokeObjectURL(blobUrl);
+			return;
+		} catch (error) {
+			if (shouldTryNext(error)) continue;
+			throw error;
+		}
+	}
+};
+
 export const documentService = {
 	getDocuments,
 	getEtatBtnTransformerDocument,

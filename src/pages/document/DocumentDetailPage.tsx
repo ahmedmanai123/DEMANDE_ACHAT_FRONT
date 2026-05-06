@@ -7,7 +7,9 @@ import {
 	CloudUpload as CloudUploadIcon,
 	ContentCopy as CopyIcon,
 	Delete as DeleteIcon,
+	Download as DownloadIcon,
 	Info as InfoIcon,
+	InsertDriveFile as FileIcon,
 	OpenInNew as OpenInNewIcon,
 	Print as PrintIcon,
 	Save as SaveIcon,
@@ -18,8 +20,10 @@ import {
 	Button,
 	Card,
 	CardContent,
+	Chip,
 	CircularProgress,
 	Dialog,
+	Divider,
 	DialogActions,
 	DialogContent,
 	DialogTitle,
@@ -27,6 +31,10 @@ import {
 	Grid,
 	IconButton,
 	InputLabel,
+	List,
+	ListItem,
+	ListItemIcon,
+	ListItemText,
 	MenuItem,
 	Paper,
 	Select,
@@ -41,6 +49,7 @@ import {
 	TableRow,
 	Tabs,
 	TextField,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import dayjs from "dayjs";
@@ -55,6 +64,11 @@ import {
 	changerEtatDocument,
 	comptabiliserDocument,
 	deleteLigneDocument,
+	deleteAttachementLigne,
+	downloadAttachementLigne,
+	type AttachementLigne,
+	getAttachementsLigne,
+	uploadAttachementLigne,
 	getDetailsDocument,
 	getLignesDocument,
 	getTaxesLignes,
@@ -292,6 +306,23 @@ export default function DocumentDetailPage() {
 	const [articlePickerSearchDesign, setArticlePickerSearchDesign] = useState("");
 	const [articlePickerTick, setArticlePickerTick] = useState(0);
 
+	// Modal attachements ligne
+	const [attachModal, setAttachModal] = useState<{
+		open: boolean;
+		lpNo: number;
+		lineRef: string;
+		loading: boolean;
+		uploading: boolean;
+		deleting: number | null;   // aT_No en cours de suppression
+		files: AttachementLigne[];
+		selectedFiles: File[];
+		dragOver: boolean;
+	}>({
+		open: false, lpNo: 0, lineRef: "",
+		loading: false, uploading: false, deleting: null,
+		files: [], selectedFiles: [], dragOver: false,
+	});
+
 	// Active tab
 	const [activeTab, setActiveTab] = useState(0);
 
@@ -315,6 +346,86 @@ export default function DocumentDetailPage() {
 		}),
 		[],
 	);
+
+	const EMPTY_ATTACH_MODAL = {
+		open: false, lpNo: 0, lineRef: "",
+		loading: false, uploading: false, deleting: null as number | null,
+		files: [] as AttachementLigne[], selectedFiles: [] as File[], dragOver: false,
+	};
+
+	const refreshAttachFiles = async (lpNo: number) => {
+		const files = await getAttachementsLigne(lpNo);
+		setAttachModal((prev) => ({ ...prev, loading: false, files }));
+	};
+
+	const openAttachModal = async (lpNo: number, lineRef: string) => {
+		setAttachModal({ ...EMPTY_ATTACH_MODAL, open: true, lpNo, lineRef, loading: true });
+		try {
+			await refreshAttachFiles(lpNo);
+		} catch {
+			toast.error("Impossible de charger les attachements.");
+			setAttachModal((prev) => ({ ...prev, loading: false }));
+		}
+	};
+
+	const closeAttachModal = () => setAttachModal(EMPTY_ATTACH_MODAL);
+
+	const handleFileSelect = (newFiles: FileList | null) => {
+		if (!newFiles) return;
+		setAttachModal((prev) => ({
+			...prev,
+			selectedFiles: [...prev.selectedFiles, ...Array.from(newFiles)],
+		}));
+	};
+
+	const removeSelectedFile = (idx: number) => {
+		setAttachModal((prev) => ({
+			...prev,
+			selectedFiles: prev.selectedFiles.filter((_, i) => i !== idx),
+		}));
+	};
+
+	const handleUploadAttach = async () => {
+		if (attachModal.selectedFiles.length === 0) return;
+		setAttachModal((prev) => ({ ...prev, uploading: true }));
+		try {
+			await uploadAttachementLigne(attachModal.lpNo, attachModal.selectedFiles);
+			toast.success(`${attachModal.selectedFiles.length} fichier${attachModal.selectedFiles.length > 1 ? "s" : ""} joint${attachModal.selectedFiles.length > 1 ? "s" : ""}.`);
+			setAttachModal((prev) => ({ ...prev, selectedFiles: [], loading: true }));
+			await refreshAttachFiles(attachModal.lpNo);
+		} catch {
+			toast.error("Erreur lors de l'envoi.");
+		} finally {
+			setAttachModal((prev) => ({ ...prev, uploading: false }));
+		}
+	};
+
+	const handleDeleteAttach = async (file: AttachementLigne) => {
+		const atNo = asNumber(file.AT_No ?? file.aT_No);
+		setAttachModal((prev) => ({ ...prev, deleting: atNo }));
+		try {
+			await deleteAttachementLigne(attachModal.lpNo, atNo);
+			toast.success("Attachement supprimé.");
+			setAttachModal((prev) => ({ ...prev, deleting: null, loading: true }));
+			await refreshAttachFiles(attachModal.lpNo);
+		} catch {
+			toast.error("Erreur lors de la suppression.");
+			setAttachModal((prev) => ({ ...prev, deleting: null }));
+		}
+	};
+
+	const handleDownloadAttach = async (file: AttachementLigne) => {
+		const atNo = asNumber(file.AT_No ?? file.aT_No);
+		const fileName =
+			asString(file.AT_OriginalFileName ?? file.aT_OriginalFileName) ||
+			asString(file.AT_FileName ?? file.aT_FileName) ||
+			`fichier_${atNo}`;
+		try {
+			await downloadAttachementLigne(attachModal.lpNo, atNo, fileName);
+		} catch {
+			toast.error("Erreur lors du téléchargement.");
+		}
+	};
 
 	// Derived values
 	const isNew = !epNumero;
@@ -1317,16 +1428,47 @@ export default function DocumentDetailPage() {
 											<TableCell align="right">{line.lP_MontantHT ? line.lP_MontantHT.toFixed(2) : ""}</TableCell>
 											<TableCell align="right">{line.lP_MontantTTC ? line.lP_MontantTTC.toFixed(2) : ""}</TableCell>
 											<TableCell align="center">
-												<Box sx={{ display: "flex", gap: 1, justifyContent: "center" }}>
-													{line.lP_NbAttachement > 0 && (
-														<IconButton size="small" color="info" title="Voir attachements">
+												<Box sx={{ display: "flex", gap: 1, justifyContent: "center", alignItems: "center" }}>
+													{/* Bouton attachements — toujours visible */}
+													<Tooltip
+														title={
+															line.lP_NbAttachement > 0
+																? `${line.lP_NbAttachement} attachement${line.lP_NbAttachement > 1 ? "s" : ""}`
+																: "Attachements"
+														}
+														placement="top"
+														arrow
+													>
+														<IconButton
+															size="small"
+															onClick={(e) => {
+																e.stopPropagation();
+																void openAttachModal(line.lP_No, line.ar_Ref);
+															}}
+															sx={
+																line.lP_NbAttachement > 0
+																	? {
+																			color: "#1976d2",
+																			bgcolor: "#e3f2fd",
+																			"&:hover": { bgcolor: "#bbdefb" },
+																		}
+																	: {
+																			color: "#9e9e9e",
+																			"&:hover": { bgcolor: "#f5f5f5" },
+																		}
+															}
+														>
 															<AttachFileIcon fontSize="small" />
 														</IconButton>
-													)}
+													</Tooltip>
+
+													{/* Lien vers la demande de besoin */}
 													{line.bA_No > 0 && (
-														<IconButton size="small" color="success" title="Lié à une demande de besoin">
-															<OpenInNewIcon fontSize="small" />
-														</IconButton>
+														<Tooltip title="Lié à une demande de besoin" placement="top" arrow>
+															<IconButton size="small" color="success">
+																<OpenInNewIcon fontSize="small" />
+															</IconButton>
+														</Tooltip>
 													)}
 												</Box>
 											</TableCell>
@@ -1495,6 +1637,222 @@ export default function DocumentDetailPage() {
 						<Button onClick={() => setArticlePickerOpen(false)}>Fermer</Button>
 					</DialogActions>
 				</Dialog>
+
+			{/* ── Modal Attachements Ligne ── */}
+			<Dialog open={attachModal.open} onClose={closeAttachModal} maxWidth="sm" fullWidth>
+
+				{/* En-tête */}
+				<DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 1.5, borderBottom: "1px solid #e0e0e0" }}>
+					<Stack direction="row" spacing={1} alignItems="center">
+						<AttachFileIcon color="info" />
+						<Typography variant="subtitle1" fontWeight={700}>
+							Attachements — {attachModal.lineRef || `Ligne ${attachModal.lpNo}`}
+						</Typography>
+						{attachModal.files.length > 0 && (
+							<Chip label={attachModal.files.length} size="small" color="info" sx={{ height: 20, fontSize: 11 }} />
+						)}
+					</Stack>
+					<IconButton size="small" onClick={closeAttachModal}>
+						<CloseIcon fontSize="small" />
+					</IconButton>
+				</DialogTitle>
+
+				<DialogContent sx={{ p: 0 }}>
+
+					{/* ── Zone d'insertion ── */}
+					<Box sx={{ px: 2, pt: 2, pb: 1.5, bgcolor: "#fafafa", borderBottom: "1px solid #e8e8e8" }}>
+						<Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5 }}>
+							Insérer un document
+						</Typography>
+
+						{/* Dropzone */}
+						<Box
+							onDragOver={(e) => { e.preventDefault(); setAttachModal((p) => ({ ...p, dragOver: true })); }}
+							onDragLeave={() => setAttachModal((p) => ({ ...p, dragOver: false }))}
+							onDrop={(e) => {
+								e.preventDefault();
+								setAttachModal((p) => ({ ...p, dragOver: false }));
+								handleFileSelect(e.dataTransfer.files);
+							}}
+							sx={{
+								mt: 1,
+								border: attachModal.dragOver ? "2px dashed #1976d2" : "2px dashed #ccc",
+								borderRadius: 2,
+								py: 2.5,
+								px: 2,
+								textAlign: "center",
+								bgcolor: attachModal.dragOver ? "#e3f2fd" : "#fff",
+								transition: "all 0.2s",
+								cursor: "pointer",
+							}}
+							onClick={() => document.getElementById("attach-file-input")?.click()}
+						>
+							<CloudUploadIcon sx={{ fontSize: 32, color: attachModal.dragOver ? "#1976d2" : "#bdbdbd", mb: 0.5 }} />
+							<Typography variant="body2" color="text.secondary">
+								Glissez vos fichiers ici ou{" "}
+								<Typography component="span" variant="body2" color="primary" sx={{ cursor: "pointer", fontWeight: 600 }}>
+									parcourir
+								</Typography>
+							</Typography>
+							<Typography variant="caption" color="text.disabled">
+								PDF, Word, Excel, Image... (max 20 MB)
+							</Typography>
+							<input
+								id="attach-file-input"
+								type="file"
+								multiple
+								hidden
+								onChange={(e) => handleFileSelect(e.target.files)}
+							/>
+						</Box>
+
+						{/* Fichiers sélectionnés (en attente d'envoi) */}
+						{attachModal.selectedFiles.length > 0 && (
+							<Box sx={{ mt: 1.5 }}>
+								<Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+									Prêt à envoyer ({attachModal.selectedFiles.length}) :
+								</Typography>
+								<Stack spacing={0.5} sx={{ mt: 0.5 }}>
+									{attachModal.selectedFiles.map((f, i) => (
+										<Stack key={i} direction="row" alignItems="center" spacing={1}
+											sx={{ bgcolor: "#e8f5e9", borderRadius: 1, px: 1.5, py: 0.5 }}
+										>
+											<FileIcon sx={{ fontSize: 16, color: "#388e3c" }} />
+											<Typography variant="caption" sx={{ flex: 1, fontWeight: 500 }} noWrap>
+												{f.name}
+											</Typography>
+											<Typography variant="caption" color="text.secondary">
+												{f.size > 1024 * 1024
+													? `${(f.size / 1024 / 1024).toFixed(1)} MB`
+													: `${(f.size / 1024).toFixed(0)} KB`}
+											</Typography>
+											<IconButton size="small" onClick={() => removeSelectedFile(i)} sx={{ p: 0.3 }}>
+												<CloseIcon sx={{ fontSize: 14, color: "#e53935" }} />
+											</IconButton>
+										</Stack>
+									))}
+								</Stack>
+
+								<Button
+									variant="contained"
+									size="small"
+									color="success"
+									fullWidth
+									sx={{ mt: 1.5 }}
+									disabled={attachModal.uploading}
+									startIcon={attachModal.uploading ? <CircularProgress size={14} color="inherit" /> : <CloudUploadIcon />}
+									onClick={() => void handleUploadAttach()}
+								>
+									{attachModal.uploading ? "Envoi en cours..." : `Joindre ${attachModal.selectedFiles.length} fichier${attachModal.selectedFiles.length > 1 ? "s" : ""}`}
+								</Button>
+							</Box>
+						)}
+					</Box>
+
+					{/* ── Séparateur ── */}
+					<Divider />
+
+					{/* ── Liste des fichiers existants ── */}
+					<Box>
+						<Typography variant="caption" sx={{ px: 2, pt: 1.5, pb: 0.5, display: "block", fontWeight: 600, color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.5 }}>
+							Fichiers joints
+						</Typography>
+
+						{attachModal.loading ? (
+							<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+								<CircularProgress size={28} />
+							</Box>
+						) : attachModal.files.length === 0 ? (
+							<Box sx={{ py: 3, textAlign: "center" }}>
+								<Typography color="text.disabled" variant="body2">
+									Aucun fichier joint pour cette ligne.
+								</Typography>
+							</Box>
+						) : (
+							<List dense disablePadding>
+								{attachModal.files.map((file, idx) => {
+									const atNo = asNumber(file.AT_No ?? file.aT_No);
+									const fileName =
+										asString(file.AT_OriginalFileName ?? file.aT_OriginalFileName) ||
+										asString(file.AT_FileName ?? file.aT_FileName) ||
+										`fichier_${atNo}`;
+									const dateStr = asString(file.AT_DateCreation ?? file.aT_DateCreation);
+									const formattedDate = dateStr
+										? new Date(dateStr).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
+										: "";
+									const sizeBytes = asNumber(file.AT_Size ?? file.aT_Size);
+									const sizeLabel = sizeBytes
+										? sizeBytes > 1024 * 1024
+											? `${(sizeBytes / 1024 / 1024).toFixed(1)} MB`
+											: `${(sizeBytes / 1024).toFixed(0)} KB`
+										: "";
+									const ext = fileName.includes(".") ? fileName.split(".").pop()?.toUpperCase() ?? "" : "";
+									const isDeleting = attachModal.deleting === atNo;
+
+									return (
+										<ListItem
+											key={atNo || idx}
+											divider
+											sx={{ px: 2, py: 0.8, "&:hover": { bgcolor: "action.hover" } }}
+											secondaryAction={
+												<Stack direction="row" spacing={0.5}>
+													<Tooltip title="Télécharger" placement="top" arrow>
+														<IconButton size="small" color="primary"
+															onClick={() => void handleDownloadAttach(file)}
+															sx={{ bgcolor: "#e3f2fd", "&:hover": { bgcolor: "#bbdefb" } }}
+														>
+															<DownloadIcon sx={{ fontSize: 15 }} />
+														</IconButton>
+													</Tooltip>
+													<Tooltip title="Supprimer" placement="top" arrow>
+														<IconButton size="small" color="error" disabled={isDeleting}
+															onClick={() => void handleDeleteAttach(file)}
+															sx={{ bgcolor: "#ffebee", "&:hover": { bgcolor: "#ffcdd2" } }}
+														>
+															{isDeleting
+																? <CircularProgress size={13} color="error" />
+																: <DeleteIcon sx={{ fontSize: 15 }} />}
+														</IconButton>
+													</Tooltip>
+												</Stack>
+											}
+										>
+											<ListItemIcon sx={{ minWidth: 36 }}>
+												<FileIcon color="action" sx={{ fontSize: 20 }} />
+											</ListItemIcon>
+											<ListItemText
+												primary={
+													<Typography variant="body2" fontWeight={500} noWrap sx={{ maxWidth: 240 }}>
+														{fileName}
+													</Typography>
+												}
+												secondary={
+													<Stack direction="row" spacing={0.8} alignItems="center" sx={{ mt: 0.2 }}>
+														{ext && <Chip label={ext} size="small" sx={{ height: 16, fontSize: 9, fontWeight: 700 }} />}
+														{formattedDate && <Typography variant="caption" color="text.secondary">{formattedDate}</Typography>}
+														{sizeLabel && <Typography variant="caption" color="text.secondary">{sizeLabel}</Typography>}
+													</Stack>
+												}
+											/>
+										</ListItem>
+									);
+								})}
+							</List>
+						)}
+					</Box>
+				</DialogContent>
+
+				<DialogActions sx={{ px: 2, py: 1, borderTop: "1px solid #e0e0e0" }}>
+					<Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+						{attachModal.files.length > 0
+							? `${attachModal.files.length} fichier${attachModal.files.length > 1 ? "s" : ""} joint${attachModal.files.length > 1 ? "s" : ""}`
+							: "Aucun fichier joint"}
+					</Typography>
+					<Button onClick={closeAttachModal} size="small" variant="outlined">
+						Fermer
+					</Button>
+				</DialogActions>
+			</Dialog>
 			</Box>
 		</>
 	);
